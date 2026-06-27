@@ -1,0 +1,22 @@
+{
+  "complaint_create_request": {
+    "product_name": "Metformin 500mg",
+    "batch_number": "MF-2024-0892",
+    "market_code": "US",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablet has unusual smell"
+  },
+  "complaint_create_response": {
+    "case_id": "C-001",
+    "risk_level": "medium",
+    "status": "open",
+    "jurisdiction": "US",
+    "confidence_score": 0.82,
+    "created_at": "2026-06-27T10:00:00Z"
+  },
+  "override_request": {
+    "decision": "override",
+    "override_reason": "Reviewer identified stronger evidence requiring escalation."
+  }
+}
