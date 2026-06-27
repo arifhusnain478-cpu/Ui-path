@@ -1,0 +1,347 @@
+{
+  "sla_config": {
+    "name": "QualiTrace_AI_SLAConfig",
+    "version": "1.0",
+    "description": "SLA timer configuration for all human task types in QualiTrace AI. All time values are in hours. Warning notification fires at 75% of elapsed time. SLA breach escalates to quality_lead and is written to the audit trail. All four risk_level values are defined separately — do not collapse any of them.",
+    "depends_on": ["CaseDefinition.json", "StageRouting.json", "HumanTaskTemplates.json"],
+
+    "global_sla_rules": {
+      "time_unit": "hours",
+      "time_unit_note": "All duration values in this file are expressed in hours. No minutes, no mixed units. Convert to milliseconds at runtime if the Maestro timer engine requires it.",
+      "warning_threshold_percent": 75,
+      "warning_threshold_note": "Warning notification fires when (elapsed_time / sla_limit) >= 0.75. This is exactly 75% — not 50%, not 80%.",
+      "breach_escalation_role": "quality_lead",
+      "breach_audit_required": true,
+      "breach_audit_event": "SLA_BREACH",
+      "breach_audit_note": "Every SLA breach must be written to the case audit trail with event type SLA_BREACH before any escalation action is taken. The audit entry must record: case_id, task_type, risk_level, sla_limit_hours, elapsed_hours, escalated_to.",
+      "warning_notification_channel": "NotificationSender.xaml",
+      "breach_notification_channel": "NotificationSender.xaml"
+    },
+
+    "risk_level_human_review_sla": {
+      "description": "SLA time limits for human_review tasks, keyed by risk_level. All four risk_level values are defined independently. Do not merge high and critical — they have different time limits and different routing behaviour upstream.",
+      "note": "These values apply to task_type values: risk_review and critical_escalation when those tasks are triggered by the corresponding risk_level. See task_sla_rules below for the authoritative per-task mapping.",
+      "rules": [
+        {
+          "risk_level": "critical",
+          "sla_limit_hours": 4,
+          "warning_at_hours": 3.0,
+          "warning_at_percent": 75,
+          "breach_escalation_role": "quality_lead",
+          "breach_audit_event": "SLA_BREACH",
+          "description": "Critical cases must receive a human decision within 4 hours of task creation. Warning fires at 3 hours (75% of 4). This is the tightest SLA in the system — no exceptions."
+        },
+        {
+          "risk_level": "high",
+          "sla_limit_hours": 24,
+          "warning_at_hours": 18.0,
+          "warning_at_percent": 75,
+          "breach_escalation_role": "quality_lead",
+          "breach_audit_event": "SLA_BREACH",
+          "description": "High risk cases must receive a human decision within 24 hours. Warning fires at 18 hours (75% of 24)."
+        },
+        {
+          "risk_level": "medium",
+          "sla_limit_hours": 72,
+          "warning_at_hours": 54.0,
+          "warning_at_percent": 75,
+          "breach_escalation_role": "quality_lead",
+          "breach_audit_event": "SLA_BREACH",
+          "description": "Medium risk cases must receive a human decision within 72 hours. Warning fires at 54 hours (75% of 72)."
+        },
+        {
+          "risk_level": "low",
+          "sla_limit_hours": 168,
+          "warning_at_hours": 126.0,
+          "warning_at_percent": 75,
+          "breach_escalation_role": "quality_lead",
+          "breach_audit_event": "SLA_BREACH",
+          "description": "Low risk cases must receive a human decision within 168 hours (7 days). Warning fires at 126 hours (75% of 168)."
+        }
+      ]
+    },
+
+    "task_sla_rules": {
+      "description": "Authoritative SLA configuration per task_type. Each entry maps directly to a template in HumanTaskTemplates.json. Where a task inherits its SLA from risk_level, the lookup key is risk_level_human_review_sla above. Where a task has a fixed SLA, it is stated directly here.",
+
+      "missing_info": {
+        "task_type": "missing_info",
+        "template_ref": "HumanTaskTemplates.json > HT-001",
+        "sla_mode": "inherited_from_risk_level",
+        "sla_lookup": "risk_level_human_review_sla[case.risk_level]",
+        "sla_limit_hours_by_risk_level": {
+          "critical": 4,
+          "high": 24,
+          "medium": 72,
+          "low": 168
+        },
+        "warning_at_percent": 75,
+        "breach_escalation_role": "quality_lead",
+        "breach_audit_event": "SLA_BREACH",
+        "description": "Missing info tasks inherit the SLA of the paused case's risk_level. A critical case paused for missing batch_number still has a 4-hour window to resolve. Timer starts when the task is created, not when the case was originally submitted.",
+        "timer_start": "task_created_at",
+        "timer_pause_behavior": "timer_continues_during_pause",
+        "timer_pause_note": "The SLA timer does NOT pause when the case pauses for missing_info. The clock keeps running from the moment the task is created."
+      },
+
+      "risk_review": {
+        "task_type": "risk_review",
+        "template_ref": "HumanTaskTemplates.json > HT-002",
+        "sla_mode": "inherited_from_risk_level",
+        "sla_lookup": "risk_level_human_review_sla[case.risk_level]",
+        "sla_limit_hours_by_risk_level": {
+          "critical": 4,
+          "high": 24,
+          "medium": 72,
+          "low": 168
+        },
+        "warning_at_percent": 75,
+        "breach_escalation_role": "quality_lead",
+        "breach_audit_event": "SLA_BREACH",
+        "description": "Risk review tasks are triggered by confidence_score < 0.6. SLA is set by the case's risk_level at the time of task creation.",
+        "timer_start": "task_created_at"
+      },
+
+      "capa_approval": {
+        "task_type": "capa_approval",
+        "template_ref": "HumanTaskTemplates.json > HT-003",
+        "sla_mode": "fixed",
+        "sla_limit_hours": 48,
+        "warning_at_hours": 36.0,
+        "warning_at_percent": 75,
+        "breach_escalation_role": "quality_lead",
+        "breach_audit_event": "SLA_BREACH",
+        "description": "CAPA approval tasks carry a fixed 48-hour SLA regardless of the case's risk_level. Warning fires at 36 hours (75% of 48). This fixed limit applies whether the underlying case is critical or low risk.",
+        "timer_start": "task_created_at",
+        "risk_level_override": false,
+        "risk_level_override_note": "risk_level does NOT change the CAPA approval SLA. It is always 48 hours."
+      },
+
+      "critical_escalation": {
+        "task_type": "critical_escalation",
+        "template_ref": "HumanTaskTemplates.json > HT-004",
+        "sla_mode": "fixed",
+        "sla_limit_hours": 4,
+        "warning_at_hours": 3.0,
+        "warning_at_percent": 75,
+        "breach_escalation_role": "quality_lead",
+        "breach_audit_event": "SLA_BREACH",
+        "description": "Critical escalation tasks always carry a 4-hour SLA. This task is only created when risk_level == 'critical', so the fixed value matches the critical row in risk_level_human_review_sla. Stated explicitly here for clarity and so Maestro does not need a lookup — it can read the value directly.",
+        "timer_start": "task_created_at",
+        "breach_secondary_action": {
+          "action": "trigger_rpa",
+          "xaml": "NotificationSender.xaml",
+          "description": "On breach, NotificationSender.xaml fires immediately in addition to the standard audit entry and escalation notification."
+        }
+      },
+
+      "final_closure": {
+        "task_type": "final_closure",
+        "template_ref": "HumanTaskTemplates.json > HT-005",
+        "sla_mode": "inherited_from_risk_level",
+        "sla_lookup": "risk_level_human_review_sla[case.risk_level]",
+        "sla_limit_hours_by_risk_level": {
+          "critical": 4,
+          "high": 24,
+          "medium": 72,
+          "low": 168
+        },
+        "warning_at_percent": 75,
+        "breach_escalation_role": "quality_lead",
+        "breach_audit_event": "SLA_BREACH",
+        "description": "Final closure tasks inherit the SLA of the case's risk_level. A critical case awaiting final sign-off still has a 4-hour window. Timer starts when the task is created at the conclusion of Stage 6 EffectivenessReview.",
+        "timer_start": "task_created_at"
+      }
+    },
+
+    "warning_notification_spec": {
+      "description": "Specification for the warning notification that fires at 75% of SLA elapsed.",
+      "trigger": "elapsed_time >= (sla_limit_hours * 0.75)",
+      "trigger_percent": 75,
+      "channel": "NotificationSender.xaml",
+      "recipient_role": "quality_lead",
+      "notification_payload": {
+        "event_type": "SLA_WARNING",
+        "case_id": "string — from case record",
+        "task_type": "string — from task record",
+        "risk_level": "string — from case record",
+        "sla_limit_hours": "float — from task SLA rule",
+        "elapsed_hours": "float — calculated at notification time",
+        "remaining_hours": "float — sla_limit_hours minus elapsed_hours",
+        "warning_threshold_percent": 75,
+        "assigned_role": "quality_lead",
+        "message": "SLA warning: this task has used 75% of its allocated time. Action required before breach."
+      },
+      "audit_entry_required": false,
+      "audit_entry_note": "Warning notifications do not require an audit trail entry. Only breach events write to the audit trail."
+    },
+
+    "breach_spec": {
+      "description": "Specification for actions taken when an SLA is breached (elapsed_time >= sla_limit_hours).",
+      "trigger": "elapsed_time >= sla_limit_hours",
+      "step_1": {
+        "action": "write_audit_entry",
+        "event_type": "SLA_BREACH",
+        "required": true,
+        "audit_payload": {
+          "event_type": "SLA_BREACH",
+          "case_id": "string — from case record",
+          "task_type": "string — from task record",
+          "risk_level": "string — from case record",
+          "sla_limit_hours": "float — from task SLA rule",
+          "elapsed_hours": "float — calculated at breach time",
+          "escalated_to": "quality_lead",
+          "timestamp": "ISO 8601 datetime"
+        },
+        "note": "Audit entry must be written BEFORE escalation notification is sent. This is step 1 — it cannot be skipped."
+      },
+      "step_2": {
+        "action": "escalate",
+        "escalate_to_role": "quality_lead",
+        "channel": "NotificationSender.xaml",
+        "required": true,
+        "notification_payload": {
+          "event_type": "SLA_BREACH",
+          "case_id": "string — from case record",
+          "task_type": "string — from task record",
+          "risk_level": "string — from case record",
+          "sla_limit_hours": "float",
+          "elapsed_hours": "float",
+          "escalated_to": "quality_lead",
+          "message": "SLA BREACH: this task has exceeded its SLA limit. Immediate attention required."
+        }
+      },
+      "breach_does_not": [
+        "automatically close the task",
+        "automatically advance the case stage",
+        "remove the task from the quality_lead queue",
+        "suppress further notifications"
+      ]
+    },
+
+    "sla_summary_table": {
+      "description": "Quick reference. All values in hours. Warning always at 75% of limit.",
+      "rows": [
+        {
+          "task_type": "critical_escalation",
+          "risk_level": "critical",
+          "sla_limit_hours": 4,
+          "warning_at_hours": 3.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "risk_review",
+          "risk_level": "critical",
+          "sla_limit_hours": 4,
+          "warning_at_hours": 3.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "risk_review",
+          "risk_level": "high",
+          "sla_limit_hours": 24,
+          "warning_at_hours": 18.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "risk_review",
+          "risk_level": "medium",
+          "sla_limit_hours": 72,
+          "warning_at_hours": 54.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "risk_review",
+          "risk_level": "low",
+          "sla_limit_hours": 168,
+          "warning_at_hours": 126.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "capa_approval",
+          "risk_level": "any",
+          "sla_limit_hours": 48,
+          "warning_at_hours": 36.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "missing_info",
+          "risk_level": "critical",
+          "sla_limit_hours": 4,
+          "warning_at_hours": 3.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "missing_info",
+          "risk_level": "high",
+          "sla_limit_hours": 24,
+          "warning_at_hours": 18.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "missing_info",
+          "risk_level": "medium",
+          "sla_limit_hours": 72,
+          "warning_at_hours": 54.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "missing_info",
+          "risk_level": "low",
+          "sla_limit_hours": 168,
+          "warning_at_hours": 126.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "final_closure",
+          "risk_level": "critical",
+          "sla_limit_hours": 4,
+          "warning_at_hours": 3.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "final_closure",
+          "risk_level": "high",
+          "sla_limit_hours": 24,
+          "warning_at_hours": 18.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "final_closure",
+          "risk_level": "medium",
+          "sla_limit_hours": 72,
+          "warning_at_hours": 54.0,
+          "breach_escalates_to": "quality_lead"
+        },
+        {
+          "task_type": "final_closure",
+          "risk_level": "low",
+          "sla_limit_hours": 168,
+          "warning_at_hours": 126.0,
+          "breach_escalates_to": "quality_lead"
+        }
+      ]
+    },
+
+    "field_references": {
+      "note": "All field names are exact snake_case from CaseDefinition.json. No camelCase anywhere in this file.",
+      "fields_used": [
+        "case_id",
+        "risk_level",
+        "status",
+        "confidence_score"
+      ],
+      "task_fields_used": [
+        "task_type",
+        "assigned_role",
+        "sla_deadline",
+        "sla_limit_hours",
+        "warning_at_hours",
+        "warning_at_percent",
+        "breach_escalation_role",
+        "breach_audit_event",
+        "override_reason"
+      ]
+    }
+  }
+}

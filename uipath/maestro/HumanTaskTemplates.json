@@ -1,0 +1,669 @@
+{
+  "human_task_templates": {
+    "name": "QualiTrace_AI_HumanTaskTemplates",
+    "version": "1.0",
+    "description": "Defines all 5 human task templates for QualiTrace AI. Every template assigns to quality_lead, exposes confidence_score and source_list, provides approve/reject/override buttons, and requires override_reason when decision is override. All field names are exact snake_case from CaseDefinition.json.",
+    "depends_on": ["CaseDefinition.json", "StageRouting.json"],
+
+    "global_template_rules": {
+      "assigned_role": "quality_lead",
+      "override_always_requires": "override_reason",
+      "display_fields_minimum": ["confidence_score", "source_list"],
+      "action_buttons_standard": ["approve", "reject", "override"],
+      "override_reason_min_length": 10,
+      "note": "These rules apply to all 5 templates below. Individual templates may add display fields and context beyond the minimum — they may not remove confidence_score, source_list, or the override_reason requirement."
+    },
+
+    "templates": [
+      {
+        "template_id": "HT-001",
+        "task_type": "missing_info",
+        "assigned_role": "quality_lead",
+        "display_name": "Missing Information — Batch Number Required",
+        "description": "Triggered when batch_number is null at any stage. The case is paused at status = pending_review and cannot advance until the reviewer supplies the missing batch_number. This task does not ask for an approve/reject decision on risk — it asks the reviewer to locate and enter the missing information so routing can resume.",
+        "trigger": {
+          "condition": "batch_number == null",
+          "source_stage": "any",
+          "routing_rule_ref": "GPR-001",
+          "resulting_status": "pending_review"
+        },
+        "display_fields": [
+          {
+            "field": "case_id",
+            "label": "Case ID",
+            "description": "Unique identifier for this complaint case."
+          },
+          {
+            "field": "product_name",
+            "label": "Product Name",
+            "description": "Name of the pharmaceutical product involved."
+          },
+          {
+            "field": "batch_number",
+            "label": "Batch Number",
+            "display_value": "NOT PROVIDED",
+            "highlight": true,
+            "description": "The batch number is missing. This field must be supplied before the case can continue."
+          },
+          {
+            "field": "complaint_type",
+            "label": "Complaint Type",
+            "description": "Category of the reported complaint."
+          },
+          {
+            "field": "jurisdiction",
+            "label": "Jurisdiction",
+            "description": "Regulatory jurisdiction — US or EU."
+          },
+          {
+            "field": "risk_level",
+            "label": "Risk Level",
+            "description": "Risk classification assigned at intake."
+          },
+          {
+            "field": "confidence_score",
+            "label": "AI Confidence Score",
+            "format": "float_as_percentage",
+            "color_threshold": {"red_below": 0.6, "orange_below": 0.7, "green_above": 0.85},
+            "description": "AI confidence in the current classification. Displayed to reviewer for context even during a pause."
+          },
+          {
+            "field": "source_list",
+            "label": "Supporting Citations",
+            "format": "citation_list",
+            "description": "Document sources retrieved by the RAG pipeline. Displayed so the reviewer understands what the AI has already found."
+          },
+          {
+            "field": "status",
+            "label": "Case Status",
+            "display_value": "pending_review",
+            "description": "Case is paused pending missing information."
+          }
+        ],
+        "input_fields": [
+          {
+            "field": "batch_number",
+            "label": "Enter Batch Number",
+            "type": "string",
+            "required": true,
+            "validation": "non_empty_string",
+            "description": "Reviewer must enter the correct batch number to unblock routing. Entered value is saved to the case record and triggers resume."
+          }
+        ],
+        "action_buttons": [
+          {
+            "action": "approve",
+            "label": "Submit Batch Number & Resume",
+            "description": "Submits the entered batch_number, updates the case record, sets status back to open, and resumes routing from the paused stage.",
+            "requires_fields": ["batch_number"],
+            "enabled_when": "batch_number input is non-empty"
+          },
+          {
+            "action": "reject",
+            "label": "Escalate — Cannot Locate Batch",
+            "description": "Used when the batch number cannot be found. Escalates to quality_lead for further investigation. Case remains in pending_review.",
+            "requires_fields": []
+          },
+          {
+            "action": "override",
+            "label": "Override — Proceed Without Batch Number",
+            "description": "Allows the case to proceed without a batch number under exceptional circumstances. override_reason is mandatory.",
+            "requires_fields": ["override_reason"]
+          }
+        ],
+        "required_fields_on_override": ["override_reason"],
+        "sla_reference": {
+          "note": "SLA for missing_info tasks is driven by the risk_level of the paused case. See SLAConfig.json task_type_overrides.missing_info for time limits.",
+          "sla_config_ref": "SLAConfig.json > task_sla_rules > missing_info"
+        },
+        "audit_events": [
+          "TASK_CREATED: missing_info task opened, case paused",
+          "TASK_RESOLVED: batch_number supplied, routing resumed",
+          "TASK_ESCALATED: batch number not found",
+          "HUMAN_OVERRIDE: proceeded without batch_number, override_reason recorded"
+        ]
+      },
+
+      {
+        "template_id": "HT-002",
+        "task_type": "risk_review",
+        "assigned_role": "quality_lead",
+        "display_name": "Risk Review — Human Assessment Required",
+        "description": "Triggered when confidence_score < 0.6 at Stage 2 or Stage 3. The AI is not sufficiently confident in its risk classification or investigation findings. The reviewer sees the full AI output and must make a formal decision before the case can advance.",
+        "trigger": {
+          "condition": "confidence_score < 0.6",
+          "source_stage": ["Stage2_RiskAssessment", "Stage3_AutoInvestigation"],
+          "routing_rule_ref": "GPR-002 and S3-R001"
+        },
+        "display_fields": [
+          {
+            "field": "case_id",
+            "label": "Case ID"
+          },
+          {
+            "field": "product_name",
+            "label": "Product Name"
+          },
+          {
+            "field": "batch_number",
+            "label": "Batch Number"
+          },
+          {
+            "field": "complaint_type",
+            "label": "Complaint Type"
+          },
+          {
+            "field": "jurisdiction",
+            "label": "Jurisdiction"
+          },
+          {
+            "field": "risk_level",
+            "label": "AI-Assigned Risk Level",
+            "description": "Risk level assigned by the Intake Agent. Reviewer may override this assessment."
+          },
+          {
+            "field": "confidence_score",
+            "label": "AI Confidence Score",
+            "format": "float_as_percentage",
+            "color_threshold": {"red_below": 0.6, "orange_below": 0.7, "green_above": 0.85},
+            "highlight": true,
+            "description": "Score is below 0.6 — this is why human review was triggered. Displayed prominently."
+          },
+          {
+            "field": "source_list",
+            "label": "Supporting Citations",
+            "format": "citation_list",
+            "description": "All document sources the AI used to reach its conclusion. Reviewer should assess citation quality when making their decision."
+          },
+          {
+            "field": "ai_recommendation",
+            "label": "AI Recommendation",
+            "description": "The AI's risk classification and reasoning summary. Presented before the reviewer makes a decision."
+          },
+          {
+            "field": "root_cause_hypotheses",
+            "label": "Root Cause Hypotheses",
+            "description": "Up to 3 ranked hypotheses from the Investigation Agent, each with its own confidence and source citations."
+          },
+          {
+            "field": "status",
+            "label": "Case Status"
+          }
+        ],
+        "action_buttons": [
+          {
+            "action": "approve",
+            "label": "Approve AI Assessment",
+            "description": "Reviewer agrees with the AI risk classification and findings. Case advances to Stage 5 CAPA. human_approval_flag is set to true.",
+            "requires_fields": [],
+            "side_effects": ["human_approval_flag = true", "status remains open"]
+          },
+          {
+            "action": "reject",
+            "label": "Reject — Return for Re-Investigation",
+            "description": "Reviewer disagrees with the AI findings. Case routes back to Stage 3 AutoInvestigation for a fresh run.",
+            "requires_fields": [],
+            "side_effects": ["human_approval_flag remains false", "investigation output cleared"]
+          },
+          {
+            "action": "override",
+            "label": "Override AI — Enter Own Assessment",
+            "description": "Reviewer replaces the AI assessment with their own. override_reason is mandatory and is recorded in the audit trail.",
+            "requires_fields": ["override_reason"],
+            "side_effects": ["human_approval_flag = true", "override_reason written to case record and audit trail"]
+          }
+        ],
+        "required_fields_on_override": ["override_reason"],
+        "sla_reference": {
+          "note": "SLA is set by the risk_level of the case at time of task creation.",
+          "sla_config_ref": "SLAConfig.json > task_sla_rules > risk_review"
+        },
+        "audit_events": [
+          "TASK_CREATED: risk_review task opened — low confidence triggered",
+          "HUMAN_APPROVE: reviewer approved AI assessment",
+          "HUMAN_REJECT: reviewer rejected — re-investigation required",
+          "HUMAN_OVERRIDE: reviewer overrode AI, override_reason recorded"
+        ]
+      },
+
+      {
+        "template_id": "HT-003",
+        "task_type": "capa_approval",
+        "assigned_role": "quality_lead",
+        "display_name": "CAPA Plan Approval",
+        "description": "Triggered after the CAPA Agent generates a corrective and preventive action plan. The reviewer assesses the plan for completeness, citation coverage, and regulatory appropriateness before it is actioned. Also used when CAPA generation fails after 3 retries and a human must step in.",
+        "trigger": {
+          "condition": "capa_plan_generated == true OR capa_agent_max_retries_exceeded == true",
+          "source_stage": "Stage5_CAPA",
+          "routing_rule_ref": "S5-R001"
+        },
+        "display_fields": [
+          {
+            "field": "case_id",
+            "label": "Case ID"
+          },
+          {
+            "field": "product_name",
+            "label": "Product Name"
+          },
+          {
+            "field": "batch_number",
+            "label": "Batch Number"
+          },
+          {
+            "field": "jurisdiction",
+            "label": "Jurisdiction",
+            "description": "CAPA actions are jurisdiction-specific. FDA requirements differ from EMA requirements."
+          },
+          {
+            "field": "risk_level",
+            "label": "Risk Level",
+            "description": "Risk level at time of CAPA generation."
+          },
+          {
+            "field": "confidence_score",
+            "label": "AI Confidence Score",
+            "format": "float_as_percentage",
+            "color_threshold": {"red_below": 0.6, "orange_below": 0.7, "green_above": 0.85},
+            "description": "Confidence from the investigation stage that underpins this CAPA plan."
+          },
+          {
+            "field": "source_list",
+            "label": "Cited Regulatory Sources",
+            "format": "citation_list",
+            "description": "Every CAPA action must be traceable to at least one source in this list. Reviewer should verify citation coverage."
+          },
+          {
+            "field": "approved_root_cause",
+            "label": "Approved Root Cause",
+            "description": "The root cause hypothesis that was approved in Stage 4 HumanReview. The CAPA plan should directly address this."
+          },
+          {
+            "field": "capa_actions",
+            "label": "CAPA Action Items",
+            "format": "table",
+            "columns": ["type", "description", "responsible_role", "due_date", "evidence_required", "effectiveness_metric", "source_citations"],
+            "description": "Full list of corrective and preventive actions generated by the CAPA Agent."
+          },
+          {
+            "field": "complaint_type",
+            "label": "Complaint Type"
+          },
+          {
+            "field": "status",
+            "label": "Case Status"
+          }
+        ],
+        "action_buttons": [
+          {
+            "action": "approve",
+            "label": "Approve CAPA Plan",
+            "description": "Reviewer approves the CAPA plan as presented. All actions are accepted and will be actioned. Case advances to Stage 6 EffectivenessReview.",
+            "requires_fields": [],
+            "side_effects": ["human_approval_flag = true", "capa_status set to approved"]
+          },
+          {
+            "action": "reject",
+            "label": "Reject — Revise CAPA Plan",
+            "description": "Reviewer finds the CAPA plan inadequate. Case routes back to Stage 5 for CAPA revision.",
+            "requires_fields": [],
+            "side_effects": ["capa_plan flagged for revision", "CAPA_REVISION_REQUIRED event written to audit trail"]
+          },
+          {
+            "action": "override",
+            "label": "Override — Modify and Approve",
+            "description": "Reviewer approves with modifications. override_reason must document what was changed and why.",
+            "requires_fields": ["override_reason"],
+            "side_effects": ["human_approval_flag = true", "override_reason recorded", "HUMAN_OVERRIDE event written to audit trail"]
+          }
+        ],
+        "required_fields_on_override": ["override_reason"],
+        "sla_reference": {
+          "note": "CAPA approval tasks have a fixed SLA of 48 hours regardless of risk_level. See SLAConfig.json.",
+          "sla_config_ref": "SLAConfig.json > task_sla_rules > capa_approval",
+          "fixed_sla_hours": 48
+        },
+        "audit_events": [
+          "TASK_CREATED: capa_approval task opened",
+          "HUMAN_APPROVE: CAPA plan approved",
+          "HUMAN_REJECT: CAPA plan rejected — revision required",
+          "HUMAN_OVERRIDE: CAPA plan modified and approved, override_reason recorded"
+        ]
+      },
+
+      {
+        "template_id": "HT-004",
+        "task_type": "critical_escalation",
+        "assigned_role": "quality_lead",
+        "display_name": "Critical Escalation — Immediate Human Review Required",
+        "description": "Triggered when risk_level == 'critical' at Stage 2. The case bypasses AutoInvestigation entirely and arrives directly at this task. Also triggered on SLA breach for any critical-risk case. This is the highest-priority task in the system — 4-hour SLA from task creation.",
+        "trigger": {
+          "primary_condition": "risk_level == 'critical'",
+          "secondary_condition": "sla_breached == true AND risk_level == 'critical'",
+          "source_stage": "Stage2_RiskAssessment",
+          "routing_rule_ref": "S2-R001"
+        },
+        "display_fields": [
+          {
+            "field": "case_id",
+            "label": "Case ID",
+            "highlight": true
+          },
+          {
+            "field": "product_name",
+            "label": "Product Name",
+            "highlight": true
+          },
+          {
+            "field": "batch_number",
+            "label": "Batch Number",
+            "description": "Batch number for immediate hold consideration."
+          },
+          {
+            "field": "complaint_type",
+            "label": "Complaint Type",
+            "highlight": true
+          },
+          {
+            "field": "jurisdiction",
+            "label": "Jurisdiction",
+            "description": "Determines applicable regulatory reporting obligations — FDA (US) or EMA (EU)."
+          },
+          {
+            "field": "risk_level",
+            "label": "Risk Level",
+            "display_value": "CRITICAL",
+            "highlight": true,
+            "description": "This case has been classified as CRITICAL. Immediate human review is mandatory before any investigation begins."
+          },
+          {
+            "field": "confidence_score",
+            "label": "AI Confidence Score",
+            "format": "float_as_percentage",
+            "color_threshold": {"red_below": 0.6, "orange_below": 0.7, "green_above": 0.85},
+            "description": "AI confidence in the critical classification. Even at high confidence, human review is mandatory for all critical cases."
+          },
+          {
+            "field": "source_list",
+            "label": "Supporting Citations",
+            "format": "citation_list",
+            "description": "Regulatory sources retrieved to support the critical classification."
+          },
+          {
+            "field": "ai_recommendation",
+            "label": "AI Risk Assessment",
+            "description": "The AI's full critical risk reasoning, including patient impact assessment."
+          },
+          {
+            "field": "sla_deadline",
+            "label": "SLA Deadline",
+            "highlight": true,
+            "description": "Critical cases must be reviewed within 4 hours of task creation. SLA timer is active."
+          },
+          {
+            "field": "status",
+            "label": "Case Status"
+          },
+          {
+            "field": "batch_hold_triggered",
+            "label": "Batch Hold Status",
+            "description": "Indicates whether BatchHoldSimulator.xaml has been triggered to place a hold on the batch in the ERP system."
+          }
+        ],
+        "action_buttons": [
+          {
+            "action": "approve",
+            "label": "Confirm Critical — Proceed to Investigation",
+            "description": "Reviewer confirms the critical classification. Case proceeds to Stage 3 AutoInvestigation (unlike normal critical routing, this explicit human confirmation allows investigation to begin). human_approval_flag is set to true.",
+            "requires_fields": [],
+            "side_effects": [
+              "human_approval_flag = true",
+              "batch_hold_triggered if batch_number is not null",
+              "investigation proceeds under human oversight"
+            ]
+          },
+          {
+            "action": "reject",
+            "label": "Downgrade — Return for Re-Classification",
+            "description": "Reviewer determines the case does not warrant critical classification. Case routes back to Stage 2 RiskAssessment for re-evaluation.",
+            "requires_fields": [],
+            "side_effects": ["risk_level reclassification required", "CRITICAL_DOWNGRADE event written to audit trail"]
+          },
+          {
+            "action": "override",
+            "label": "Override Classification — Enter Revised Assessment",
+            "description": "Reviewer replaces the AI's critical classification with a different risk_level or course of action. override_reason is mandatory and must document the clinical or regulatory basis for the override.",
+            "requires_fields": ["override_reason"],
+            "side_effects": [
+              "override_reason saved to case record",
+              "override_reason written to audit trail",
+              "HUMAN_OVERRIDE event tagged CRITICAL_CASE",
+              "human_approval_flag = true"
+            ]
+          }
+        ],
+        "required_fields_on_override": ["override_reason"],
+        "sla_reference": {
+          "note": "Critical escalation tasks carry the strictest SLA in the system — 4 hours from task creation. SLA warning fires at 75% (3 hours). Breach escalates immediately to quality_lead.",
+          "sla_config_ref": "SLAConfig.json > task_sla_rules > critical_escalation",
+          "fixed_sla_hours": 4,
+          "warning_at_percent": 75
+        },
+        "escalation_on_sla_breach": {
+          "escalate_to_role": "quality_lead",
+          "action": "send_breach_notification",
+          "audit_event": "SLA_BREACH: critical_escalation task overdue — escalated to quality_lead"
+        },
+        "rpa_integrations": [
+          {
+            "trigger": "on task creation",
+            "xaml": "BatchHoldSimulator.xaml",
+            "condition": "batch_number IS NOT NULL",
+            "description": "Places a simulated batch hold in the mock ERP system as soon as a critical_escalation task is created."
+          },
+          {
+            "trigger": "on SLA breach",
+            "xaml": "NotificationSender.xaml",
+            "description": "Sends breach notification to quality_lead."
+          }
+        ],
+        "audit_events": [
+          "TASK_CREATED: critical_escalation task opened — risk_level critical",
+          "BATCH_HOLD_TRIGGERED: batch hold placed via BatchHoldSimulator.xaml",
+          "HUMAN_APPROVE: critical classification confirmed — investigation authorised",
+          "CRITICAL_DOWNGRADE: reviewer downgraded from critical — re-classification required",
+          "HUMAN_OVERRIDE: critical classification overridden, override_reason recorded",
+          "SLA_BREACH: 4-hour SLA exceeded — quality_lead notified"
+        ]
+      },
+
+      {
+        "template_id": "HT-005",
+        "task_type": "final_closure",
+        "assigned_role": "quality_lead",
+        "display_name": "Final Closure Approval",
+        "description": "Triggered before Stage 7 Closure. This is the mandatory final human approval gate. No case may be closed without a formal decision recorded by this task. It provides the human_approval_flag = true that Stage 7 requires as a hard entry condition. The reviewer sees a complete case summary before signing off.",
+        "trigger": {
+          "condition": "effectiveness_result == 'pass' AND Stage6_EffectivenessReview completed",
+          "source_stage": "Stage6_EffectivenessReview",
+          "routing_rule_ref": "S6-R001",
+          "gates": "Stage7_Closure entry is blocked until this task resolves with approve or override"
+        },
+        "display_fields": [
+          {
+            "field": "case_id",
+            "label": "Case ID"
+          },
+          {
+            "field": "product_name",
+            "label": "Product Name"
+          },
+          {
+            "field": "batch_number",
+            "label": "Batch Number"
+          },
+          {
+            "field": "complaint_type",
+            "label": "Complaint Type"
+          },
+          {
+            "field": "jurisdiction",
+            "label": "Jurisdiction"
+          },
+          {
+            "field": "risk_level",
+            "label": "Risk Level"
+          },
+          {
+            "field": "confidence_score",
+            "label": "Final AI Confidence Score",
+            "format": "float_as_percentage",
+            "color_threshold": {"red_below": 0.6, "orange_below": 0.7, "green_above": 0.85},
+            "description": "The confidence score from the investigation phase. Shown as part of the complete case record."
+          },
+          {
+            "field": "source_list",
+            "label": "All Cited Sources",
+            "format": "citation_list",
+            "description": "Complete list of regulatory and SOP sources cited across the entire case lifecycle."
+          },
+          {
+            "field": "approved_root_cause",
+            "label": "Approved Root Cause",
+            "description": "The root cause confirmed in Stage 4."
+          },
+          {
+            "field": "capa_actions",
+            "label": "Completed CAPA Actions",
+            "format": "table",
+            "columns": ["type", "description", "responsible_role", "due_date", "status", "effectiveness_metric"],
+            "description": "All CAPA actions with their completion status. All must be complete before closure is permitted."
+          },
+          {
+            "field": "effectiveness_result",
+            "label": "Effectiveness Review Result",
+            "display_value": "PASS",
+            "description": "Confirmed pass from Stage 6 EffectivenessReview."
+          },
+          {
+            "field": "override_reason",
+            "label": "Override Reason (if applicable)",
+            "description": "Any override_reason recorded during the case lifecycle. Surfaced here for the reviewer's awareness before sign-off."
+          },
+          {
+            "field": "human_approval_flag",
+            "label": "Human Approval Status",
+            "description": "Will be set to true upon approval or override. Stage 7 Closure is hard-blocked until this is true."
+          },
+          {
+            "field": "status",
+            "label": "Current Case Status",
+            "description": "Will transition to closed upon approval."
+          },
+          {
+            "field": "audit_trail_summary",
+            "label": "Case Audit Trail",
+            "format": "chronological_event_list",
+            "description": "Complete timeline of all events, decisions, and transitions across the entire case lifecycle."
+          }
+        ],
+        "action_buttons": [
+          {
+            "action": "approve",
+            "label": "Approve Closure",
+            "description": "Reviewer formally approves case closure. human_approval_flag is set to true. Stage 7 entry is unblocked. Case status transitions to closed.",
+            "requires_fields": [],
+            "side_effects": [
+              "human_approval_flag = true",
+              "status = closed",
+              "ReportGenerator.xaml triggered to produce closure PDF",
+              "CASE_CLOSED event written to audit trail"
+            ]
+          },
+          {
+            "action": "reject",
+            "label": "Reject Closure — Reopen Case",
+            "description": "Reviewer determines the case is not ready for closure — for example, CAPA evidence is insufficient. Case is reopened and routed back to Stage 6 EffectivenessReview.",
+            "requires_fields": [],
+            "side_effects": [
+              "human_approval_flag remains false",
+              "status remains open",
+              "CLOSURE_REJECTED event written to audit trail"
+            ]
+          },
+          {
+            "action": "override",
+            "label": "Override — Close with Conditions",
+            "description": "Reviewer closes the case with noted conditions or reservations. override_reason must document the conditions under which closure is being approved.",
+            "requires_fields": ["override_reason"],
+            "side_effects": [
+              "human_approval_flag = true",
+              "status = closed",
+              "override_reason saved to case record",
+              "HUMAN_OVERRIDE — CONDITIONAL_CLOSURE event written to audit trail",
+              "ReportGenerator.xaml triggered"
+            ]
+          }
+        ],
+        "required_fields_on_override": ["override_reason"],
+        "sla_reference": {
+          "note": "Final closure tasks inherit the SLA of the case's risk_level. See SLAConfig.json.",
+          "sla_config_ref": "SLAConfig.json > task_sla_rules > final_closure"
+        },
+        "hard_gate": {
+          "description": "This task is the mandatory gate for Stage 7 entry. Stage 7 Closure checks human_approval_flag == true as a hard entry condition. If this task resolves with reject, human_approval_flag remains false and Stage 7 is blocked.",
+          "stage_routing_ref": "StageRouting.json > Stage7_Closure > entry_conditions > hard_block"
+        },
+        "rpa_integrations": [
+          {
+            "trigger": "on approve or override",
+            "xaml": "ReportGenerator.xaml",
+            "description": "Generates and saves the final closure PDF report for the case."
+          }
+        ],
+        "audit_events": [
+          "TASK_CREATED: final_closure task opened",
+          "HUMAN_APPROVE: closure approved — human_approval_flag set true",
+          "CLOSURE_REJECTED: reviewer rejected closure — case reopened to Stage 6",
+          "HUMAN_OVERRIDE: conditional closure approved, override_reason recorded",
+          "CASE_CLOSED: status set to closed, closure report generated"
+        ]
+      }
+    ],
+
+    "task_type_index": {
+      "missing_info": "HT-001",
+      "risk_review": "HT-002",
+      "capa_approval": "HT-003",
+      "critical_escalation": "HT-004",
+      "final_closure": "HT-005"
+    },
+
+    "field_references": {
+      "note": "All field names below are exact snake_case identifiers from CaseDefinition.json. No aliases or camelCase equivalents are used anywhere in this file.",
+      "golden_rule_fields_referenced": [
+        "case_id",
+        "jurisdiction",
+        "risk_level",
+        "confidence_score",
+        "status",
+        "product_name",
+        "batch_number",
+        "complaint_type",
+        "source_list",
+        "override_reason"
+      ],
+      "system_fields_referenced": [
+        "human_approval_flag",
+        "sla_deadline",
+        "ai_recommendation",
+        "root_cause_hypotheses",
+        "approved_root_cause",
+        "capa_actions",
+        "effectiveness_result",
+        "audit_trail_summary",
+        "batch_hold_triggered"
+      ]
+    }
+  }
+}

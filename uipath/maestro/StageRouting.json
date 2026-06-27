@@ -1,0 +1,384 @@
+{
+  "stage_routing": {
+    "name": "QualiTrace_AI_StageRouting",
+    "version": "1.0",
+    "description": "Defines all 7 Maestro stages and the routing conditions between them. All field name references use exact snake_case from CaseDefinition.json. Global pause rules apply before any per-stage routing is evaluated.",
+    "depends_on": "CaseDefinition.json",
+
+    "global_pause_rules": {
+      "description": "These two rules are evaluated FIRST at every stage transition, before any stage-specific routing condition is checked. If either rule fires, routing halts immediately.",
+      "rules": [
+        {
+          "rule_id": "GPR-001",
+          "name": "MissingBatchNumber_Pause",
+          "condition": "batch_number == null",
+          "action": "pause_routing",
+          "set_status": "pending_review",
+          "resume_trigger": "batch_number IS NOT NULL",
+          "resume_behavior": "resume_from_same_stage",
+          "description": "If batch_number is null at any point in the workflow, case status is set to pending_review and routing pauses. The case does not move forward or backward. When batch_number is supplied via the update endpoint, routing resumes from the exact stage where it paused."
+        },
+        {
+          "rule_id": "GPR-002",
+          "name": "LowConfidence_MandatoryHumanReview",
+          "condition": "confidence_score < 0.6",
+          "action": "route_to_stage",
+          "target_stage": "Stage4_HumanReview",
+          "priority": "overrides_stage_routing",
+          "description": "If confidence_score is below 0.6, the case is routed to Stage 4 HumanReview regardless of risk_level or current stage. This rule takes precedence over all per-stage routing conditions except GPR-001 (which is evaluated first)."
+        }
+      ],
+      "evaluation_order": [
+        "GPR-001 evaluated first — if fires, routing stops (no further evaluation)",
+        "GPR-002 evaluated second — if fires, route to Stage4_HumanReview (skip stage-specific rules)",
+        "Stage-specific routing conditions evaluated only if both GPR-001 and GPR-002 do not fire"
+      ]
+    },
+
+    "stages": [
+      {
+        "stage_id": "Stage1_Intake",
+        "stage_number": 1,
+        "name": "Intake",
+        "description": "Initial complaint receipt and field extraction. The Intake Agent parses the incoming complaint, extracts all Golden Rule fields, assigns risk_level and confidence_score, and sets the initial status.",
+        "entry_conditions": {
+          "description": "Entry point for all new complaints. No prior stage required.",
+          "requires": []
+        },
+        "actions": [
+          "Extract and validate all Golden Rule fields from the complaint source",
+          "Assign case_id in C-### format",
+          "Set initial status to 'open'",
+          "Invoke Intake Agent to assign risk_level and confidence_score",
+          "Record intake event in audit trail"
+        ],
+        "routing_out": [
+          {
+            "condition_id": "S1-R001",
+            "condition": "intake_complete == true",
+            "target_stage": "Stage2_RiskAssessment",
+            "description": "Intake always transitions to Stage 2. There are no branch conditions at this stage — all cases proceed.",
+            "priority": 1
+          }
+        ],
+        "notes": "Global pause rules are still evaluated here. If batch_number is null after intake, case pauses at Stage 1 before advancing to Stage 2."
+      },
+
+      {
+        "stage_id": "Stage2_RiskAssessment",
+        "stage_number": 2,
+        "name": "RiskAssessment",
+        "description": "Evaluates risk_level assigned by the Intake Agent and routes accordingly. This is the first fork in the workflow. Critical cases bypass investigation entirely and go directly to human review.",
+        "entry_conditions": {
+          "requires": ["Stage1_Intake completed", "risk_level IS NOT NULL", "confidence_score IS NOT NULL"]
+        },
+        "actions": [
+          "Read risk_level from case record",
+          "Read confidence_score from case record",
+          "Apply global pause rules before routing",
+          "Evaluate routing conditions in priority order"
+        ],
+        "routing_out": [
+          {
+            "condition_id": "S2-R001",
+            "condition": "risk_level == 'critical'",
+            "target_stage": "Stage4_HumanReview",
+            "priority": 1,
+            "description": "CRITICAL FAST-TRACK: risk_level 'critical' routes immediately to Stage 4 HumanReview. Stage 3 AutoInvestigation is skipped entirely. This rule is evaluated before all other Stage 2 routing conditions.",
+            "set_task_type": "critical_escalation",
+            "note": "risk_level has exactly 4 values: low, medium, high, critical. This condition matches only 'critical' — not 'high'."
+          },
+          {
+            "condition_id": "S2-R002",
+            "condition": "risk_level == 'high'",
+            "target_stage": "Stage3_AutoInvestigation",
+            "priority": 2,
+            "description": "High risk proceeds to automated investigation. Note: if confidence_score < 0.6 also applies, GPR-002 fires first and overrides this routing."
+          },
+          {
+            "condition_id": "S2-R003",
+            "condition": "risk_level == 'medium'",
+            "target_stage": "Stage3_AutoInvestigation",
+            "priority": 3,
+            "description": "Medium risk proceeds to automated investigation."
+          },
+          {
+            "condition_id": "S2-R004",
+            "condition": "risk_level == 'low'",
+            "target_stage": "Stage3_AutoInvestigation",
+            "priority": 4,
+            "description": "Low risk proceeds to automated investigation."
+          }
+        ],
+        "risk_level_routing_summary": {
+          "critical": "Stage4_HumanReview (immediate — before investigation)",
+          "high": "Stage3_AutoInvestigation",
+          "medium": "Stage3_AutoInvestigation",
+          "low": "Stage3_AutoInvestigation"
+        },
+        "notes": "risk_level must be one of exactly four values: low, medium, high, critical. Do not collapse high and critical — they have different routing behaviour. GPR-002 is still active: even a low/medium/high case routes to HumanReview if confidence_score < 0.6."
+      },
+
+      {
+        "stage_id": "Stage3_AutoInvestigation",
+        "stage_number": 3,
+        "name": "AutoInvestigation",
+        "description": "AI-driven investigation using the RAG pipeline. The Investigation Agent retrieves jurisdiction-filtered documents, builds hypotheses, and returns confidence_score and source_list. This stage is skipped for critical risk cases.",
+        "entry_conditions": {
+          "requires": [
+            "Stage2_RiskAssessment completed",
+            "risk_level IN ['low', 'medium', 'high']",
+            "batch_number IS NOT NULL"
+          ]
+        },
+        "actions": [
+          "Invoke RAG retriever with jurisdiction-filtered knowledge base",
+          "Invoke Investigation Agent with RAG context",
+          "Validate agent output (3 hypotheses, source_ids present, overall_confidence in range)",
+          "Update confidence_score from agent output",
+          "Populate source_list from retrieved chunks",
+          "Record investigation output in audit trail"
+        ],
+        "routing_out": [
+          {
+            "condition_id": "S3-R001",
+            "condition": "confidence_score < 0.6",
+            "target_stage": "Stage4_HumanReview",
+            "priority": 1,
+            "description": "Low confidence score means the AI is not sufficiently certain of its findings. Case must go to human review before any CAPA is generated.",
+            "set_task_type": "risk_review",
+            "note": "This condition mirrors GPR-002 at the stage level. GPR-002 would already have fired if confidence_score was below 0.6 before this stage; this condition catches cases where confidence_score drops below 0.6 as a result of the investigation itself."
+          },
+          {
+            "condition_id": "S3-R002",
+            "condition": "confidence_score >= 0.6",
+            "target_stage": "Stage5_CAPA",
+            "priority": 2,
+            "description": "Sufficient confidence — AI investigation is accepted and CAPA generation can proceed."
+          }
+        ],
+        "notes": "Agent output must be validated by output_validator.py before this stage advances. If validation fails after 3 retries, route to Stage4_HumanReview with task_type = risk_review."
+      },
+
+      {
+        "stage_id": "Stage4_HumanReview",
+        "stage_number": 4,
+        "name": "HumanReview",
+        "description": "Mandatory human decision point. Triggered by: (a) risk_level == 'critical' from Stage 2, (b) confidence_score < 0.6 from Stage 2 or Stage 3, or (c) agent validation failure. The assigned reviewer sees the AI recommendation, confidence_score, and full source_list before making a decision.",
+        "entry_conditions": {
+          "requires": [
+            "One of: risk_level == 'critical' OR confidence_score < 0.6 OR agent_validation_failed == true",
+            "Human task record created with correct task_type and SLA deadline"
+          ]
+        },
+        "entry_sources": {
+          "from_Stage2": {
+            "trigger": "risk_level == 'critical'",
+            "task_type": "critical_escalation"
+          },
+          "from_Stage2_or_Stage3_via_GPR002": {
+            "trigger": "confidence_score < 0.6",
+            "task_type": "risk_review"
+          },
+          "from_Stage3": {
+            "trigger": "confidence_score < 0.6 post-investigation OR agent_validation_failed",
+            "task_type": "risk_review"
+          }
+        },
+        "actions": [
+          "Create human task with assigned role: quality_lead",
+          "Set SLA deadline based on risk_level (see SLAConfig.json)",
+          "Present AI recommendation, confidence_score, and source_list to reviewer",
+          "Await human decision: approve, reject, or override",
+          "If decision == 'override': require and record override_reason",
+          "Record human decision and override_reason (if present) in audit trail",
+          "Set human_approval_flag = true if decision is approve or override"
+        ],
+        "routing_out": [
+          {
+            "condition_id": "S4-R001",
+            "condition": "decision == 'approve'",
+            "target_stage": "Stage5_CAPA",
+            "priority": 1,
+            "side_effects": [
+              "human_approval_flag = true",
+              "status remains 'open'"
+            ],
+            "description": "Reviewer approves the AI recommendation. Case advances to CAPA generation."
+          },
+          {
+            "condition_id": "S4-R002",
+            "condition": "decision == 'override'",
+            "target_stage": "Stage5_CAPA",
+            "priority": 2,
+            "required_fields": ["override_reason"],
+            "side_effects": [
+              "human_approval_flag = true",
+              "override_reason saved to case record",
+              "override_reason written to audit trail",
+              "audit event tagged: HUMAN_OVERRIDE"
+            ],
+            "description": "Reviewer overrides the AI recommendation with their own judgement. override_reason is mandatory — routing is blocked until a non-empty override_reason is provided. Case then advances to CAPA."
+          },
+          {
+            "condition_id": "S4-R003",
+            "condition": "decision == 'reject'",
+            "target_stage": "Stage3_AutoInvestigation",
+            "priority": 3,
+            "side_effects": [
+              "human_approval_flag remains false",
+              "investigation output cleared",
+              "audit event tagged: HUMAN_REJECT — REINVESTIGATION_REQUIRED"
+            ],
+            "description": "Reviewer rejects the AI findings. Case routes back to Stage 3 for a fresh investigation. human_approval_flag is NOT set."
+          }
+        ],
+        "blocking_rules": [
+          {
+            "rule_id": "S4-B001",
+            "condition": "decision == 'override' AND (override_reason == null OR override_reason == '')",
+            "action": "block_routing",
+            "message": "override_reason is required when decision is 'override'. Routing is blocked until a non-empty override_reason is recorded."
+          }
+        ]
+      },
+
+      {
+        "stage_id": "Stage5_CAPA",
+        "stage_number": 5,
+        "name": "CAPA",
+        "description": "Corrective and Preventive Action generation. The CAPA Agent produces a structured action plan based on the approved root cause. Every CAPA action must cite at least one source from source_list.",
+        "entry_conditions": {
+          "requires": [
+            "Stage4_HumanReview completed with decision IN ['approve', 'override'] OR Stage3_AutoInvestigation completed with confidence_score >= 0.6",
+            "human_approval_flag == true (if arriving from Stage 4)"
+          ]
+        },
+        "actions": [
+          "Invoke CAPA Agent with approved root cause, investigation output, and jurisdiction",
+          "Validate every CAPA action has at least one source citation from source_list",
+          "Store CAPA plan linked to case_id",
+          "Set CAPA SLA deadlines per action (48 hours default — see SLAConfig.json)",
+          "Record CAPA generation event in audit trail"
+        ],
+        "routing_out": [
+          {
+            "condition_id": "S5-R001",
+            "condition": "capa_plan_generated == true AND all_capa_actions_have_citations == true",
+            "target_stage": "Stage6_EffectivenessReview",
+            "priority": 1,
+            "description": "Valid CAPA plan generated with all citations present. Routes to effectiveness review."
+          }
+        ],
+        "notes": "If CAPA Agent fails to produce a valid plan with citations after 3 retries, escalate to Stage4_HumanReview with task_type = capa_approval."
+      },
+
+      {
+        "stage_id": "Stage6_EffectivenessReview",
+        "stage_number": 6,
+        "name": "EffectivenessReview",
+        "description": "Evaluates whether all CAPA actions have been completed and are effective. A human reviewer confirms whether the corrective actions resolved the root cause. Cannot be triggered before all CAPA actions are marked complete.",
+        "entry_conditions": {
+          "requires": [
+            "Stage5_CAPA completed",
+            "All CAPA action items marked complete",
+            "capa_plan_generated == true"
+          ]
+        },
+        "actions": [
+          "Confirm all CAPA actions are in status: complete",
+          "Create human effectiveness review task with task_type: capa_approval",
+          "Record effectiveness decision and evidence in audit trail"
+        ],
+        "routing_out": [
+          {
+            "condition_id": "S6-R001",
+            "condition": "effectiveness_result == 'pass'",
+            "target_stage": "Stage7_Closure",
+            "priority": 1,
+            "side_effects": [
+              "human_approval_flag confirmed true",
+              "status set to 'open' pending final closure step"
+            ],
+            "description": "All CAPA actions are effective. Case advances to closure."
+          },
+          {
+            "condition_id": "S6-R002",
+            "condition": "effectiveness_result == 'fail'",
+            "target_stage": "Stage5_CAPA",
+            "priority": 2,
+            "side_effects": [
+              "CAPA plan flagged for revision",
+              "audit event tagged: EFFECTIVENESS_FAIL — CAPA_REVISION_REQUIRED"
+            ],
+            "description": "CAPA actions did not resolve the root cause. Case routes back to Stage 5 for a revised CAPA plan."
+          }
+        ]
+      },
+
+      {
+        "stage_id": "Stage7_Closure",
+        "stage_number": 7,
+        "name": "Closure",
+        "description": "Final stage. Case is closed and the closure report is generated. This stage is a HARD BLOCK — it cannot be entered unless human_approval_flag is true. This is not a warning; routing into this stage with human_approval_flag == false is a blocking error.",
+        "entry_conditions": {
+          "requires": [
+            "Stage6_EffectivenessReview completed with effectiveness_result == 'pass'",
+            "human_approval_flag == true"
+          ],
+          "hard_block": {
+            "condition": "human_approval_flag == false",
+            "action": "block_entry",
+            "error_code": 403,
+            "message": "HARD BLOCK: Case cannot enter Closure stage. human_approval_flag is false. A human reviewer must formally approve the case before closure is permitted. This block cannot be bypassed by any system action."
+          }
+        },
+        "actions": [
+          "Verify human_approval_flag == true (hard block if false — not a warning)",
+          "Set status to 'closed'",
+          "Trigger ReportGenerator.xaml to produce closure PDF",
+          "Record closure timestamp and approving actor in audit trail",
+          "Audit event tagged: CASE_CLOSED"
+        ],
+        "routing_out": [],
+        "terminal_stage": true,
+        "notes": "This is a terminal stage. No outbound routing. The only exit from a closed case is via a new complaint submission that references the original case_id."
+      }
+    ],
+
+    "stage_map_summary": {
+      "description": "Quick reference for all routing paths.",
+      "paths": [
+        "Stage1 → Stage2 (always)",
+        "Stage2 → Stage4 (if risk_level == 'critical')",
+        "Stage2 → Stage3 (if risk_level IN ['low', 'medium', 'high'])",
+        "Stage3 → Stage4 (if confidence_score < 0.6)",
+        "Stage3 → Stage5 (if confidence_score >= 0.6)",
+        "Stage4 → Stage5 (if decision == 'approve' OR decision == 'override')",
+        "Stage4 → Stage3 (if decision == 'reject')",
+        "Stage5 → Stage6 (after valid CAPA plan generated)",
+        "Stage6 → Stage7 (if effectiveness_result == 'pass')",
+        "Stage6 → Stage5 (if effectiveness_result == 'fail')",
+        "Stage7 → TERMINAL (no further routing)"
+      ],
+      "global_interrupts": [
+        "ANY stage → PAUSE (if batch_number == null) [GPR-001]",
+        "ANY stage → Stage4 (if confidence_score < 0.6) [GPR-002]"
+      ]
+    },
+
+    "field_references": {
+      "note": "All field names below are the exact snake_case identifiers from CaseDefinition.json. Do not rename or reformat them.",
+      "fields_used_in_routing": [
+        "risk_level",
+        "confidence_score",
+        "batch_number",
+        "status",
+        "human_approval_flag",
+        "override_reason",
+        "case_id",
+        "source_list"
+      ]
+    }
+  }
+}

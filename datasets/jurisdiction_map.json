@@ -1,0 +1,52 @@
+{
+  "jurisdiction_map": {
+    "US": {
+      "jurisdiction": "US",
+      "authority": "FDA",
+      "primary_regulation": "21 CFR Part 211",
+      "secondary_regulation": "ICH Q10",
+      "reporting_requirement": "FDA MedWatch / Field Alert Report within 3 days for critical",
+      "language_requirements": ["en"]
+    },
+    "EU": {
+      "jurisdiction": "EU",
+      "authority": "EMA",
+      "primary_regulation": "EudraLex Volume 4",
+      "secondary_regulation": "ICH Q10",
+      "reporting_requirement": "National Competent Authority within 15 days for serious",
+      "language_requirements": ["en", "fr", "de", "es", "it"]
+    },
+    "UK": {
+      "jurisdiction": "EU",
+      "authority": "MHRA",
+      "primary_regulation": "EudraLex Volume 4",
+      "secondary_regulation": "ICH Q10",
+      "reporting_requirement": "MHRA Yellow Card within 15 days for serious",
+      "language_requirements": ["en"]
+    },
+    "CA": {
+      "jurisdiction": "US",
+      "authority": "Health Canada",
+      "primary_regulation": "21 CFR Part 211",
+      "secondary_regulation": "ICH Q10",
+      "reporting_requirement": "Health Canada within 15 days for serious",
+      "language_requirements": ["en", "fr"]
+    },
+    "DE": {
+      "jurisdiction": "EU",
+      "authority": "BfArM",
+      "primary_regulation": "EudraLex Volume 4",
+      "secondary_regulation": "ICH Q10",
+      "reporting_requirement": "BfArM within 15 days for serious",
+      "language_requirements": ["en", "de"]
+    },
+    "FR": {
+      "jurisdiction": "EU",
+      "authority": "ANSM",
+      "primary_regulation": "EudraLex Volume 4",
+      "secondary_regulation": "ICH Q10",
+      "reporting_requirement": "ANSM within 15 days for serious",
+      "language_requirements": ["en", "fr"]
+    }
+  }
+}

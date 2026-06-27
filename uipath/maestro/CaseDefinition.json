@@ -1,0 +1,175 @@
+{
+  "case_definition": {
+    "name": "QualiTrace_AI_PharmaceuticalComplaint",
+    "version": "1.0",
+    "description": "Maestro Case definition for pharmaceutical complaint management. All field names are snake_case and must remain identical across Backend, Frontend, RAG, and Maestro layers.",
+
+    "case_schema": {
+      "case_id": {
+        "type": "string",
+        "format": "C-###",
+        "example": "C-001",
+        "description": "Auto-generated case identifier. Sequential, zero-padded to 3 digits minimum.",
+        "required": true,
+        "generated_by": "system"
+      },
+      "product_name": {
+        "type": "string",
+        "description": "Name of the pharmaceutical product involved in the complaint.",
+        "required": true
+      },
+      "batch_number": {
+        "type": "string",
+        "nullable": true,
+        "description": "Manufacturing batch number. May be null if not provided by reporter. Null value pauses case routing — case will not advance until batch_number is supplied.",
+        "required": false,
+        "null_behavior": "pause_case"
+      },
+      "jurisdiction": {
+        "type": "string",
+        "allowed_values": ["US", "EU"],
+        "description": "Regulatory jurisdiction. Must be exactly 'US' or 'EU'. No other values permitted.",
+        "required": true,
+        "validation": "strict_enum"
+      },
+      "complaint_type": {
+        "type": "string",
+        "allowed_values": ["contamination", "labeling", "quality"],
+        "description": "Category of the complaint.",
+        "required": true,
+        "validation": "strict_enum"
+      },
+      "risk_level": {
+        "type": "string",
+        "allowed_values": ["low", "medium", "high", "critical"],
+        "description": "Risk classification assigned by the Intake Agent. Four levels — do not collapse to three. 'critical' triggers immediate human review before any investigation begins.",
+        "required": true,
+        "validation": "strict_enum"
+      },
+      "confidence_score": {
+        "type": "float",
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "AI confidence in the risk classification, expressed as a decimal between 0.0 and 1.0. Scores below 0.6 trigger mandatory human review regardless of risk_level.",
+        "required": true
+      },
+      "status": {
+        "type": "string",
+        "allowed_values": ["open", "pending_review", "closed"],
+        "description": "Current lifecycle status of the case. 'pending_review' is set when batch_number is null or when the case is awaiting human decision. No case may reach 'closed' without a human approval on record.",
+        "required": true,
+        "default": "open",
+        "validation": "strict_enum"
+      },
+      "source_list": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "description": "Citation reference in the format 'filename — section_number'."
+        },
+        "description": "Ordered list of document citations produced by the RAG pipeline and referenced in the AI investigation output.",
+        "required": false,
+        "default": []
+      },
+      "override_reason": {
+        "type": "string",
+        "description": "Free-text explanation provided by a human reviewer when overriding an AI recommendation. Required whenever a human decision type is 'override'. Must be stored in the case record and written to the audit trail.",
+        "required": false,
+        "nullable": true,
+        "required_when": "decision == 'override'"
+      }
+    },
+
+    "generated_fields": {
+      "created_at": {
+        "type": "datetime",
+        "format": "ISO 8601",
+        "description": "Timestamp when the case was first created. Set by the system; not editable.",
+        "generated_by": "system"
+      },
+      "updated_at": {
+        "type": "datetime",
+        "format": "ISO 8601",
+        "description": "Timestamp of the most recent update to any case field.",
+        "generated_by": "system"
+      },
+      "human_approval_flag": {
+        "type": "boolean",
+        "default": false,
+        "description": "Set to true only when a human reviewer has formally approved the case for closure. Closure stage is blocked unless this flag is true.",
+        "required": true
+      }
+    },
+
+    "validation_rules": [
+      {
+        "rule_id": "VR-001",
+        "field": "jurisdiction",
+        "condition": "value NOT IN ['US', 'EU']",
+        "action": "reject",
+        "error_code": 422,
+        "message": "jurisdiction must be exactly 'US' or 'EU'. No other values are permitted."
+      },
+      {
+        "rule_id": "VR-002",
+        "field": "risk_level",
+        "condition": "value NOT IN ['low', 'medium', 'high', 'critical']",
+        "action": "reject",
+        "error_code": 422,
+        "message": "risk_level must be one of: low, medium, high, critical."
+      },
+      {
+        "rule_id": "VR-003",
+        "field": "status",
+        "condition": "value NOT IN ['open', 'pending_review', 'closed']",
+        "action": "reject",
+        "error_code": 422,
+        "message": "status must be one of: open, pending_review, closed."
+      },
+      {
+        "rule_id": "VR-004",
+        "field": "confidence_score",
+        "condition": "value < 0.0 OR value > 1.0",
+        "action": "reject",
+        "error_code": 422,
+        "message": "confidence_score must be a float between 0.0 and 1.0 inclusive."
+      },
+      {
+        "rule_id": "VR-005",
+        "field": "batch_number",
+        "condition": "value == null",
+        "action": "set_status_pending_review",
+        "message": "batch_number is null. Case status set to pending_review. Routing is paused until batch_number is supplied."
+      },
+      {
+        "rule_id": "VR-006",
+        "field": "override_reason",
+        "condition": "decision == 'override' AND (override_reason == null OR override_reason == '')",
+        "action": "reject",
+        "error_code": 422,
+        "message": "override_reason is required when decision is 'override'."
+      },
+      {
+        "rule_id": "VR-007",
+        "field": "status",
+        "condition": "new_status == 'closed' AND human_approval_flag == false",
+        "action": "reject",
+        "error_code": 403,
+        "message": "Case cannot be closed without a recorded human approval. human_approval_flag must be true."
+      }
+    ],
+
+    "case_id_generation": {
+      "strategy": "sequential",
+      "prefix": "C-",
+      "padding": 3,
+      "example_sequence": ["C-001", "C-002", "C-003"]
+    },
+
+    "notes": {
+      "golden_rule": "All field names in this file are the authoritative source of truth. Backend Pydantic models, Frontend TypeScript interfaces, RAG context_builder output, and all Maestro configurations must use these exact snake_case names. Never use camelCase equivalents (e.g., use risk_level, not riskLevel).",
+      "risk_level_note": "risk_level has exactly four values. Do not merge 'high' and 'critical' — they have different routing behaviours. critical routes to human review before investigation; high does not.",
+      "batch_number_note": "batch_number == null is a legal state. It does not reject the complaint — it pauses the case at status = pending_review until the information is supplied via the update endpoint."
+    }
+  }
+}

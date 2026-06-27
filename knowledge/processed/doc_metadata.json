@@ -1,0 +1,90 @@
+{
+  "fda_21cfr_211": {
+    "doc_id": "fda_21cfr_211",
+    "filename": "fda_21cfr_211.pdf",
+    "jurisdiction": "US",
+    "authority": "FDA",
+    "doc_type": "REGULATION",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 30
+  },
+  "ema_eudralex_vol4": {
+    "doc_id": "ema_eudralex_vol4",
+    "filename": "ema_eudralex_vol4.pdf",
+    "jurisdiction": "EU",
+    "authority": "EMA",
+    "doc_type": "REGULATION",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 6
+  },
+  "ich_q9": {
+    "doc_id": "ich_q9",
+    "filename": "ich_q9.pdf",
+    "jurisdiction": "GLOBAL",
+    "authority": "ICH",
+    "doc_type": "REGULATION",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 16
+  },
+  "ich_q10": {
+    "doc_id": "ich_q10",
+    "filename": "ich_q10.pdf",
+    "jurisdiction": "GLOBAL",
+    "authority": "ICH",
+    "doc_type": "REGULATION",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 13
+  },
+  "sop_qa_042_site_a": {
+    "doc_id": "sop_qa_042_site_a",
+    "filename": "sop_qa_042_site_a.pdf",
+    "jurisdiction": "US",
+    "authority": "INTERNAL",
+    "doc_type": "SOP",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 3
+  },
+  "sop_qa_018_packaging": {
+    "doc_id": "sop_qa_018_packaging",
+    "filename": "sop_qa_018_packaging.pdf",
+    "jurisdiction": "US",
+    "authority": "INTERNAL",
+    "doc_type": "SOP",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 2
+  },
+  "sop_qa_001_global": {
+    "doc_id": "sop_qa_001_global",
+    "filename": "sop_qa_001_global.pdf",
+    "jurisdiction": "GLOBAL",
+    "authority": "INTERNAL",
+    "doc_type": "SOP",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 2
+  },
+  "sop_eu_gmp_local": {
+    "doc_id": "sop_eu_gmp_local",
+    "filename": "sop_eu_gmp_local.pdf",
+    "jurisdiction": "EU",
+    "authority": "INTERNAL",
+    "doc_type": "SOP",
+    "status": "ACTIVE",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "chunk_count": 3
+  }
+}

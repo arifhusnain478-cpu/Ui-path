@@ -1,0 +1,102 @@
+[
+  {
+    "complaint_id": "TEST-US-001",
+    "product_name": "Metformin 500mg",
+    "batch_number": "MF-2024-0892",
+    "market_code": "US",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablet has unusual chemical smell on opening the bottle. Patient stated the odor was not present in previous prescriptions of the same product.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-US-002",
+    "product_name": "Lisinopril 10mg",
+    "batch_number": null,
+    "market_code": "US",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablet discoloration — tablets appear yellowish instead of white. Multiple tablets affected in the same bottle.",
+    "scenario": "missing_info"
+  },
+  {
+    "complaint_id": "TEST-US-003",
+    "product_name": "Injectable Saline 0.9%",
+    "batch_number": "INJ-2024-0200",
+    "market_code": "US",
+    "complaint_type": "contamination",
+    "patient_impact": true,
+    "description": "Patient developed fever and rigors 20 minutes after IV administration of saline. Suspected particulate contamination. Attending physician reported adverse event.",
+    "scenario": "critical"
+  },
+  {
+    "complaint_id": "TEST-US-004",
+    "product_name": "Atorvastatin 40mg",
+    "batch_number": "AT-2024-0231",
+    "market_code": "US",
+    "complaint_type": "labeling",
+    "patient_impact": false,
+    "description": "Outer carton label states 40mg but tablets inside are embossed with 20mg. Patient noticed discrepancy at pharmacy.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-US-005",
+    "product_name": "Amoxicillin 250mg",
+    "batch_number": null,
+    "market_code": "US",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Capsule content appears clumped — powder not free-flowing when capsule opened. Pediatric patient unable to take dose mixed in food.",
+    "scenario": "missing_info"
+  },
+  {
+    "complaint_id": "TEST-US-006",
+    "product_name": "Warfarin 5mg",
+    "batch_number": "WAR-2024-0198",
+    "market_code": "US",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablets appear to have uneven weight — some tablets visibly smaller than others in the same bottle. Hospital pharmacy flagged during incoming inspection.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-US-007",
+    "product_name": "Heparin 5000 IU/mL",
+    "batch_number": "HEP-2024-0089",
+    "market_code": "US",
+    "complaint_type": "contamination",
+    "patient_impact": true,
+    "description": "Black particulate matter visible in heparin vial before administration. Nurse noticed and did not administer. ICU setting — patient was critically ill.",
+    "scenario": "critical"
+  },
+  {
+    "complaint_id": "TEST-US-008",
+    "product_name": "Metoprolol 100mg",
+    "batch_number": "MET-2024-0312",
+    "market_code": "US",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablet coating peeling off — multiple tablets in bottle show visible flaking of the outer film coat.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-US-009",
+    "product_name": "Fluoxetine 20mg",
+    "batch_number": null,
+    "market_code": "US",
+    "complaint_type": "labeling",
+    "patient_impact": false,
+    "description": "Patient information leaflet missing from medication pack. Carton sealed correctly but no PIL inside. Pharmacy noticed during dispensing.",
+    "scenario": "missing_info"
+  },
+  {
+    "complaint_id": "TEST-US-010",
+    "product_name": "Insulin Glargine 100U/mL",
+    "batch_number": "INS-2024-0445",
+    "market_code": "US",
+    "complaint_type": "contamination",
+    "patient_impact": true,
+    "description": "White flocculent particles observed in insulin pen cartridge. Diabetic patient noticed cloudiness and did not administer. Requires urgent investigation due to patient safety risk.",
+    "scenario": "critical"
+  }
+]

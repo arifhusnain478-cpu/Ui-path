@@ -1,0 +1,102 @@
+[
+  {
+    "complaint_id": "TEST-EU-001",
+    "product_name": "Ibuprofen 400mg",
+    "batch_number": "IBU-2024-0113",
+    "market_code": "EU",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablet fragmentation observed — tablets breaking apart inside blister pack before removal. Multiple blisters affected in same carton.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-EU-002",
+    "product_name": "Amlodipine 5mg",
+    "batch_number": null,
+    "market_code": "EU",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablet surface shows visible cracks. Patient noticed before taking dose. Tablets from multiple strips in same box affected.",
+    "scenario": "missing_info"
+  },
+  {
+    "complaint_id": "TEST-EU-003",
+    "product_name": "Ciprofloxacin 500mg",
+    "batch_number": "CIP-2024-0276",
+    "market_code": "EU",
+    "complaint_type": "contamination",
+    "patient_impact": false,
+    "description": "Black foreign particle found inside sealed film-coated tablet bottle. Consumer submitted product sample. Particle appears to be a metal fragment.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-EU-004",
+    "product_name": "Simvastatin 20mg",
+    "batch_number": "SIM-2024-0501",
+    "market_code": "EU",
+    "complaint_type": "labeling",
+    "patient_impact": false,
+    "description": "Expiry date absent from outer carton. Date is present on inner bottle but not printed on carton. Multiple units from same batch confirmed by distributor.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-EU-005",
+    "product_name": "Omeprazole 40mg",
+    "batch_number": null,
+    "market_code": "EU",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Capsule shell discoloration — capsules appear brownish instead of white/pink. Patient concerned about product integrity.",
+    "scenario": "missing_info"
+  },
+  {
+    "complaint_id": "TEST-EU-006",
+    "product_name": "Paracetamol 1000mg",
+    "batch_number": "PAR-2024-0622",
+    "market_code": "EU",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Tablets sticking together — multiple tablets fused inside sealed bottle. Patient reported difficulty separating tablets without breaking them.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-EU-007",
+    "product_name": "Methotrexate 2.5mg",
+    "batch_number": "MTX-2024-0031",
+    "market_code": "EU",
+    "complaint_type": "contamination",
+    "patient_impact": true,
+    "description": "Hospital pharmacy found foreign white tablet mixed in with methotrexate tablets. Drug appears to be a different product. Oncology patient — serious safety concern. Batch immediately quarantined.",
+    "scenario": "critical"
+  },
+  {
+    "complaint_id": "TEST-EU-008",
+    "product_name": "Losartan 100mg",
+    "batch_number": "LOS-2024-0387",
+    "market_code": "EU",
+    "complaint_type": "labeling",
+    "patient_impact": false,
+    "description": "French language patient information leaflet missing from EU multilingual pack. English and German present but French required for French market distribution.",
+    "scenario": "normal"
+  },
+  {
+    "complaint_id": "TEST-EU-009",
+    "product_name": "Amoxicillin 875mg",
+    "batch_number": null,
+    "market_code": "EU",
+    "complaint_type": "quality",
+    "patient_impact": false,
+    "description": "Low potency suspected — patient reports reduced therapeutic effect. Hospital lab assay shows 87% vs specification of 95-105%. Batch number not recorded at time of dispensing.",
+    "scenario": "missing_info"
+  },
+  {
+    "complaint_id": "TEST-EU-010",
+    "product_name": "Vincristine 1mg/mL Injection",
+    "batch_number": "VIN-2024-0009",
+    "market_code": "EU",
+    "complaint_type": "contamination",
+    "patient_impact": true,
+    "description": "Visible glass particles in vincristine injection vial detected by nurse before administration. Paediatric oncology patient. Critical — did not administer. Batch hold requested immediately.",
+    "scenario": "critical"
+  }
+]

@@ -1,0 +1,97 @@
+{
+  "description": "Few-shot examples for Intake Agent risk classification. These are included directly in the agent system prompt — not ML training data.",
+  "examples": [
+    {
+      "complaint_type": "contamination",
+      "patient_impact": true,
+      "recurrence": false,
+      "product_type": "sterile_injectable",
+      "risk_level": "critical",
+      "reasoning": "Contamination with direct patient harm in sterile injectable — highest risk category. Immediate escalation to human reviewer required before any automated processing."
+    },
+    {
+      "complaint_type": "contamination",
+      "patient_impact": true,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "critical",
+      "reasoning": "Contamination with confirmed patient impact. Regardless of product type, patient harm elevates to critical. Human review mandatory."
+    },
+    {
+      "complaint_type": "labeling",
+      "patient_impact": true,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "critical",
+      "reasoning": "Labeling error causing patient harm — wrong dosage administered. Critical even though complaint_type is labeling. Patient impact overrides type."
+    },
+    {
+      "complaint_type": "contamination",
+      "patient_impact": false,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "high",
+      "reasoning": "Contamination without confirmed patient impact is still high risk — potential for harm is significant. Investigation agent must run with full RAG context."
+    },
+    {
+      "complaint_type": "quality",
+      "patient_impact": false,
+      "recurrence": true,
+      "product_type": "finished_pharma",
+      "risk_level": "high",
+      "reasoning": "Recurrence of a quality defect elevates risk even without patient impact. Pattern indicates systemic issue. CAPA from previous case likely ineffective."
+    },
+    {
+      "complaint_type": "labeling",
+      "patient_impact": false,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "medium",
+      "reasoning": "Labeling error without patient harm — regulatory non-compliance but no immediate safety risk. Standard investigation required."
+    },
+    {
+      "complaint_type": "quality",
+      "patient_impact": false,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "medium",
+      "reasoning": "Quality defect without patient impact or recurrence. Standard route — automated investigation with human review at CAPA approval stage."
+    },
+    {
+      "complaint_type": "quality",
+      "patient_impact": false,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "low",
+      "reasoning": "Minor quality defect — cosmetic issue such as coating appearance or tablet color variation. No safety concern. SLA = 168 hours."
+    },
+    {
+      "complaint_type": "labeling",
+      "patient_impact": false,
+      "recurrence": false,
+      "product_type": "finished_pharma",
+      "risk_level": "low",
+      "reasoning": "Minor labeling issue — missing secondary language or formatting error with no safety implication. Regulatory notification may be required but no batch action needed."
+    },
+    {
+      "complaint_type": "contamination",
+      "patient_impact": false,
+      "recurrence": true,
+      "product_type": "sterile_injectable",
+      "risk_level": "critical",
+      "reasoning": "Recurrent contamination in sterile injectable. Even without confirmed patient impact, recurrence in this product type escalates to critical — previous CAPA was ineffective."
+    }
+  ],
+  "risk_level_definitions": {
+    "critical": "Immediate patient harm confirmed or probable, or recurrent contamination in sterile products. Human review BEFORE investigation. SLA = 4 hours.",
+    "high": "Contamination without confirmed harm, or recurrent quality defects. Human review after investigation. SLA = 24 hours.",
+    "medium": "Quality or labeling defect without patient impact. Standard automated flow with human CAPA approval. SLA = 72 hours.",
+    "low": "Minor cosmetic or non-safety labeling issue. Automated flow with minimal human touchpoints. SLA = 168 hours."
+  },
+  "field_rules": {
+    "patient_impact_check": "If patient_impact is true, minimum risk_level is critical regardless of complaint_type.",
+    "recurrence_check": "If recurrence is true, escalate risk_level by one tier (low→medium, medium→high, high→critical).",
+    "sterile_injectable_rule": "contamination + sterile_injectable always = critical, even without patient_impact.",
+    "missing_batch_rule": "If batch_number is null, set status to pending_review and pause routing until batch_number is supplied."
+  }
+}
