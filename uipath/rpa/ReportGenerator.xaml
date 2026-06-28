@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity mc:Ignorable="sads" x:Class="UiPath.ReportGenerator" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities" xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="CaseId" Type="InArgument(x:String)" />
+  </x:Members>
+  <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
+  <Sequence DisplayName="ReportGenerator - QualiTrace AI" sap2010:WorkflowViewState.IdRef="1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Name="ResponseBody" />
+      <Variable x:TypeArguments="x:String" Name="OutputPath" />
+      <Variable x:TypeArguments="x:String" Name="ReportText" />
+      <Variable x:TypeArguments="x:String" Name="ProductName" />
+      <Variable x:TypeArguments="x:String" Name="RiskLevel" />
+      <Variable x:TypeArguments="x:String" Name="Status" />
+      <Variable x:TypeArguments="x:String" Name="Jurisdiction" />
+    </Sequence.Variables>
+
+    <WriteLine DisplayName="Log: ReportGenerator Started" Text="[&quot;[ReportGenerator] Generating report for case: &quot; + CaseId]" />
+
+    <!-- GET case -->
+    <Assign DisplayName="Call GET /complaints/{case_id}">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ResponseBody]</OutArgument></Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">
+          <![CDATA[
+            Function CallApi() As String
+              Dim client As New System.Net.WebClient()
+              client.Headers.Add("Authorization", "Bearer " & AuthToken)
+              Return client.DownloadString(BaseUrl & "/complaints/" & CaseId)
+            End Function
+            CallApi()
+          ]]>
+        </InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <!-- Parse fields -->
+    <Assign DisplayName="Parse product_name">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ProductName]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """product_name""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse risk_level">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[RiskLevel]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """risk_level""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse status">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[Status]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """status""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse jurisdiction">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[Jurisdiction]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """jurisdiction""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- Build report text -->
+    <Assign DisplayName="Build Report">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ReportText]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">["QualiTrace AI — Complaint Case Report" + Environment.NewLine + "======================================" + Environment.NewLine + "Case ID     : " + CaseId + Environment.NewLine + "Product     : " + ProductName + Environment.NewLine + "Risk Level  : " + RiskLevel + Environment.NewLine + "Status      : " + Status + Environment.NewLine + "Jurisdiction: " + Jurisdiction + Environment.NewLine + "Generated   : " + DateTime.UtcNow.ToString("o") + Environment.NewLine + Environment.NewLine + "RAW RESPONSE:" + Environment.NewLine + ResponseBody]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- Set output path -->
+    <Assign DisplayName="Set Output Path">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[OutputPath]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">["D:\Hackthon of summer vacation\Ui-path\uipath\rpa\reports\" + CaseId + "_report.txt"]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- Write report -->
+    <InvokeMethod DisplayName="Write Report File" MethodName="WriteAllText" TargetType="[GetType(System.IO.File)]">
+      <InvokeMethod.Parameters>
+        <InArgument x:TypeArguments="x:String">[OutputPath]</InArgument>
+        <InArgument x:TypeArguments="x:String">[ReportText]</InArgument>
+      </InvokeMethod.Parameters>
+    </InvokeMethod>
+
+    <WriteLine DisplayName="Log: Done" Text="[&quot;[ReportGenerator] Report saved: &quot; + OutputPath]" />
+  </Sequence>
+</Activity>

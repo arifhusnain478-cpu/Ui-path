@@ -1,0 +1,35 @@
+# QualiTrace AI — Backend Requirements
+# Generated: June 2026 | Team: QualiBots | AgentHack 2026
+# Install: pip install -r requirements.txt
+
+# ── Web Framework ──────────────────────────────────────────────────────────────
+fastapi==0.115.14          # Pinned to last 0.115.x — stable, proven with Pydantic v2
+uvicorn[standard]==0.34.3  # ASGI server with websocket + reload support
+
+# ── Data Validation & Settings ─────────────────────────────────────────────────
+pydantic[email]>=2.10.6   # v2 required — EmailStr lives in pydantic[email]
+pydantic-settings==2.7.1   # Reads .env into Settings class (config.py)
+
+# ── Database ───────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.36         # ORM — maps Python models to SQLite tables
+aiosqlite==0.20.0          # Async SQLite driver required by SQLAlchemy async engine
+
+# ── Authentication ─────────────────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0  # JWT encode/decode — HS256 signing
+passlib[bcrypt]==1.7.4            # Password hashing — bcrypt scheme
+
+# ── LLM ───────────────────────────────────────────────────────────────────────
+groq==0.13.1               # Groq API client — llama-3.3-70b-versatile
+
+# ── RAG Pipeline ───────────────────────────────────────────────────────────────
+scikit-learn>=1.6.0
+numpy>=1.24.0    # Embedding arrays (.npy files) — pinned to 1.x for faiss-cpu compat
+faiss-cpu==1.13.0     # Vector similarity search over embeddings
+rank-bm25==0.2.2           # BM25 keyword search index
+
+# ── PDF Processing ─────────────────────────────────────────────────────────────
+pymupdf==1.24.14           # PDF ingestion in knowledge/scripts/ingest.py (import fitz)
+reportlab==4.2.5           # Final case closure PDF generation (routes/reports.py)
+
+# ── Environment ────────────────────────────────────────────────────────────────
+python-dotenv==1.0.1       # Loads .env file — used by pydantic-settings

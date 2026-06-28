@@ -1,0 +1,6 @@
+Product: Injectable Saline
+Batch: B-004
+Market: US
+Type: contamination
+Patient Impact: Yes
+Description: Patient developed high fever after IV administration. Possible contamination detected in batch B-004.

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity mc:Ignorable="sads" x:Class="UiPath.BatchHoldSimulator" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities" xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="CaseId" Type="InArgument(x:String)" />
+  </x:Members>
+  <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
+  <Sequence DisplayName="BatchHoldSimulator - QualiTrace AI" sap2010:WorkflowViewState.IdRef="1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Name="ResponseBody" />
+      <Variable x:TypeArguments="x:String" Name="Status" />
+      <Variable x:TypeArguments="x:String" Name="BatchNumber" />
+      <Variable x:TypeArguments="x:String" Name="RiskLevel" />
+      <Variable x:TypeArguments="x:String" Name="OutputPath" />
+      <Variable x:TypeArguments="x:String" Name="JsonContent" />
+    </Sequence.Variables>
+
+    <WriteLine DisplayName="Log: BatchHoldSimulator Started" Text="[&quot;[BatchHoldSimulator] Checking case: &quot; + CaseId]" />
+
+    <!-- GET case -->
+    <Assign DisplayName="Call GET /complaints/{case_id}">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ResponseBody]</OutArgument></Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">
+          <![CDATA[
+            Function CallApi() As String
+              Dim client As New System.Net.WebClient()
+              client.Headers.Add("Authorization", "Bearer " & AuthToken)
+              Return client.DownloadString(BaseUrl & "/complaints/" & CaseId)
+            End Function
+            CallApi()
+          ]]>
+        </InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <!-- Parse status -->
+    <Assign DisplayName="Parse status">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[Status]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """status""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse batch_number">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[BatchNumber]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """batch_number""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse risk_level">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[RiskLevel]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """risk_level""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <WriteLine DisplayName="Log: Status" Text="[&quot;[BatchHoldSimulator] Case &quot; + CaseId + &quot; status: &quot; + Status]" />
+
+    <!-- Check if pending_review -->
+    <If DisplayName="Check if pending_review">
+      <If.Condition><InArgument x:TypeArguments="x:Boolean">[Status = "pending_review"]</InArgument></If.Condition>
+      <If.Then>
+        <Sequence DisplayName="Write Batch Hold File">
+          <Assign DisplayName="Set Output Path">
+            <Assign.To><OutArgument x:TypeArguments="x:String">[OutputPath]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="x:String">["D:\Hackthon of summer vacation\Ui-path\uipath\rpa\mock_erp\batch_hold_" + CaseId + ".json"]</InArgument></Assign.Value>
+          </Assign>
+
+          <Assign DisplayName="Build JSON">
+            <Assign.To><OutArgument x:TypeArguments="x:String">[JsonContent]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="x:String">["{" + Environment.NewLine + "  ""case_id"": """ + CaseId + """," + Environment.NewLine + "  ""batch_number"": """ + BatchNumber + """," + Environment.NewLine + "  ""risk_level"": """ + RiskLevel + """," + Environment.NewLine + "  ""hold_status"": ""HELD""," + Environment.NewLine + "  ""reason"": ""Complaint under review — batch quarantine initiated""," + Environment.NewLine + "  ""held_at"": """ + DateTime.UtcNow.ToString("o") + """" + Environment.NewLine + "}"]</InArgument></Assign.Value>
+          </Assign>
+
+          <InvokeMethod DisplayName="Write Batch Hold JSON" MethodName="WriteAllText" TargetType="[GetType(System.IO.File)]">
+            <InvokeMethod.Parameters>
+              <InArgument x:TypeArguments="x:String">[OutputPath]</InArgument>
+              <InArgument x:TypeArguments="x:String">[JsonContent]</InArgument>
+            </InvokeMethod.Parameters>
+          </InvokeMethod>
+
+          <WriteLine DisplayName="Log: Hold Written" Text="[&quot;[BatchHoldSimulator] BATCH HOLD written: &quot; + OutputPath]" />
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <WriteLine DisplayName="Log: No Hold Needed" Text="[&quot;[BatchHoldSimulator] Case status is '&quot; + Status + &quot;' — no batch hold required.&quot;]" />
+      </If.Else>
+    </If>
+  </Sequence>
+</Activity>

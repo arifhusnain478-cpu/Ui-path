@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity mc:Ignorable="sads" x:Class="UiPath.NotificationSender" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities" xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="CaseId" Type="InArgument(x:String)" />
+  </x:Members>
+  <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
+  <Sequence DisplayName="NotificationSender - QualiTrace AI" sap2010:WorkflowViewState.IdRef="1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Name="ResponseBody" />
+      <Variable x:TypeArguments="x:String" Name="RiskLevel" />
+      <Variable x:TypeArguments="x:String" Name="Status" />
+      <Variable x:TypeArguments="x:String" Name="SlaDeadline" />
+      <Variable x:TypeArguments="x:String" Name="LogPath" />
+      <Variable x:TypeArguments="x:String" Name="LogContent" />
+    </Sequence.Variables>
+
+    <WriteLine DisplayName="Log: NotificationSender Started" Text="[&quot;[NotificationSender] Fetching case: &quot; + CaseId]" />
+
+    <!-- GET case from API -->
+    <Assign DisplayName="Call GET /complaints/{case_id}">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ResponseBody]</OutArgument></Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">
+          <![CDATA[
+            Function CallApi() As String
+              Dim client As New System.Net.WebClient()
+              client.Headers.Add("Authorization", "Bearer " & AuthToken)
+              Return client.DownloadString(BaseUrl & "/complaints/" & CaseId)
+            End Function
+            CallApi()
+          ]]>
+        </InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <!-- Parse fields -->
+    <Assign DisplayName="Parse risk_level">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[RiskLevel]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """risk_level""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse status">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[Status]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """status""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse sla_deadline">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[SlaDeadline]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """sla_deadline""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- Log to console -->
+    <WriteLine DisplayName="Log: case_id" Text="[&quot;[NotificationSender] case_id     : &quot; + CaseId]" />
+    <WriteLine DisplayName="Log: risk_level" Text="[&quot;[NotificationSender] risk_level  : &quot; + RiskLevel]" />
+    <WriteLine DisplayName="Log: sla_deadline" Text="[&quot;[NotificationSender] sla_deadline: &quot; + SlaDeadline]" />
+
+    <!-- Build log content -->
+    <Assign DisplayName="Build Log Content">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[LogContent]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">["QualiTrace AI — Case Notification" + Environment.NewLine + "==============================" + Environment.NewLine + "case_id     : " + CaseId + Environment.NewLine + "risk_level  : " + RiskLevel + Environment.NewLine + "status      : " + Status + Environment.NewLine + "sla_deadline: " + SlaDeadline + Environment.NewLine + "generated_at: " + DateTime.UtcNow.ToString("o")]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- Set log path -->
+    <Assign DisplayName="Set Log Path">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[LogPath]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">["D:\Hackthon of summer vacation\Ui-path\uipath\rpa\logs\notification_" + CaseId + ".txt"]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- Write log file -->
+    <InvokeMethod DisplayName="Write Notification Log" MethodName="WriteAllText" TargetType="[GetType(System.IO.File)]">
+      <InvokeMethod.Parameters>
+        <InArgument x:TypeArguments="x:String">[LogPath]</InArgument>
+        <InArgument x:TypeArguments="x:String">[LogContent]</InArgument>
+      </InvokeMethod.Parameters>
+    </InvokeMethod>
+
+    <WriteLine DisplayName="Log: Done" Text="[&quot;[NotificationSender] Notification written to: &quot; + LogPath]" />
+  </Sequence>
+</Activity>

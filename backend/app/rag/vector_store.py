@@ -3,6 +3,7 @@ import os
 RAG — Vector Store
 Cosine similarity search using TF-IDF + SVD embeddings.
 Filters to eligible chunk_ids before searching.
+
 """
 
 import json
@@ -11,8 +12,7 @@ import numpy as np
 from pathlib import Path
 from sklearn.preprocessing import normalize
 
-PROCESSED_DIR = Path(os.environ.get("QUALITRACE_KNOWLEDGE_DIR", str(Path(__file__).resolve().parent.parent.parent.parent.parent / "knowledge" / "processed")))
-
+PROCESSED_DIR = Path("D:/Hackthon of summer vacation/Ui-path/knowledge/processed")
 # Module-level cache so files load once
 _chunks      = None
 _embeddings  = None
@@ -27,15 +27,15 @@ def _load():
     if _chunks is not None:
         return
 
-    with open(PROCESSED_DIR / "chunks.json") as f:
+    with open(PROCESSED_DIR / "chunks.json", encoding="utf-8") as f:
         _chunks = {c["chunk_id"]: c for c in json.load(f)}
 
     _embeddings = np.load(str(PROCESSED_DIR / "embeddings.npy"))
 
     with open(PROCESSED_DIR / "chunk_index.json") as f:
         raw = json.load(f)
-        _chunk_index = {int(k): v for k, v in raw.items()}
-        _id_to_pos   = {v: int(k) for k, v in raw.items()}
+        _chunk_index = {k: v for k, v in raw.items()}
+        _id_to_pos   = {v: k for k, v in raw.items()}
 
     with open(PROCESSED_DIR / "tfidf_vectorizer.pkl", "rb") as f:
         _vectorizer = pickle.load(f)

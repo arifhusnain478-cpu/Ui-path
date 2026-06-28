@@ -8,11 +8,11 @@ GLOBAL chunks always included. US chunks never leak into EU results and vice ver
 import json
 from pathlib import Path
 
-PROCESSED_DIR = Path(os.environ.get("QUALITRACE_KNOWLEDGE_DIR", str(Path(__file__).resolve().parent.parent.parent.parent.parent / "knowledge" / "processed")))
+PROCESSED_DIR = Path("D:/Hackthon of summer vacation/Ui-path/knowledge/processed")
 
 
 def _load_chunks():
-    with open(PROCESSED_DIR / "chunks.json") as f:
+    with open(PROCESSED_DIR / "chunks.json", encoding="utf-8") as f:
         return json.load(f)
 
 

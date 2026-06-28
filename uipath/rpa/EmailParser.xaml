@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity mc:Ignorable="sads" x:Class="UiPath.EmailParser" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities" xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=mscorlib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="EmailFilePath" Type="InArgument(x:String)" />
+  </x:Members>
+  <sap2010:WorkflowViewState.IdRef>1</sap2010:WorkflowViewState.IdRef>
+  <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
+  <Sequence DisplayName="EmailParser - QualiTrace AI" sap2010:WorkflowViewState.IdRef="2">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Name="EmailContent" />
+      <Variable x:TypeArguments="x:String" Name="ProductName" />
+      <Variable x:TypeArguments="x:String" Name="BatchNumber" />
+      <Variable x:TypeArguments="x:String" Name="MarketCode" />
+      <Variable x:TypeArguments="x:String" Name="ComplaintType" />
+      <Variable x:TypeArguments="x:String" Name="Description" />
+      <Variable x:TypeArguments="x:Boolean" Default="False" Name="PatientImpact" />
+      <Variable x:TypeArguments="x:String" Name="RequestBody" />
+      <Variable x:TypeArguments="x:String" Name="ResponseBody" />
+      <Variable x:TypeArguments="x:String" Name="CaseId" />
+    </Sequence.Variables>
+
+    <WriteLine DisplayName="Log: EmailParser Started" Text="[&quot;[EmailParser] Starting complaint email processing...&quot;]" />
+
+    <!-- Read Email File -->
+    <Assign DisplayName="Read Email File">
+      <Assign.To>
+        <OutArgument x:TypeArguments="x:String">[EmailContent]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">[System.IO.File.ReadAllText("D:\Hackthon of summer vacation\Ui-path\uipath\rpa\mock_emails\complaint.txt")]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <WriteLine DisplayName="Log: Email Read" Text="[&quot;[EmailParser] Email content loaded, parsing fields...&quot;]" />
+
+    <!-- Parse Fields -->
+    <Assign DisplayName="Parse ProductName">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ProductName]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Product:\s*(.+)").Groups(1).Value.Trim()]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse BatchNumber">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[BatchNumber]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Batch:\s*(.+)").Groups(1).Value.Trim()]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse MarketCode">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[MarketCode]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Market:\s*(.+)").Groups(1).Value.Trim()]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse ComplaintType">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ComplaintType]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Type:\s*(.+)").Groups(1).Value.Trim().ToLower()]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse Description">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[Description]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Description:\s*(.+)").Groups(1).Value.Trim()]</InArgument></Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Parse PatientImpact">
+      <Assign.To><OutArgument x:TypeArguments="x:Boolean">[PatientImpact]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:Boolean">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Patient Impact:\s*(.+)").Groups(1).Value.Trim().ToLower() = "true"]</InArgument></Assign.Value>
+    </Assign>
+
+    <WriteLine DisplayName="Log: Parsed Fields" Text="[&quot;[EmailParser] Parsed: &quot; + ProductName + &quot; | &quot; + ComplaintType + &quot; | &quot; + MarketCode]" />
+
+    <!-- Build JSON Body -->
+    <Assign DisplayName="Build Request Body">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[RequestBody]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">["{""product_name"":""" + ProductName + """,""batch_number"":""" + BatchNumber + """,""market_code"":""" + MarketCode + """,""complaint_type"":""" + ComplaintType + """,""patient_impact"":" + PatientImpact.ToString().ToLower() + ",""description"":""" + Description + """}"]</InArgument></Assign.Value>
+    </Assign>
+
+    <!-- POST to API -->
+    <WriteLine DisplayName="Log: Calling API" Text="[&quot;[EmailParser] POSTing complaint to QualiTrace API...&quot;]" />
+
+    <Assign DisplayName="Call POST /complaints">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[ResponseBody]</OutArgument></Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">
+          <![CDATA[
+            Function CallApi() As String
+              Dim client As New System.Net.WebClient()
+              client.Headers.Add("Content-Type", "application/json")
+              client.Headers.Add("Authorization", "Bearer " & AuthToken)
+              Return client.UploadString(BaseUrl & "/complaints", "POST", RequestBody)
+            End Function
+            CallApi()
+          ]]>
+        </InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <WriteLine DisplayName="Log: API Response" Text="[&quot;[EmailParser] Response: &quot; + ResponseBody]" />
+
+    <!-- Extract case_id -->
+    <Assign DisplayName="Extract case_id">
+      <Assign.To><OutArgument x:TypeArguments="x:String">[CaseId]</OutArgument></Assign.To>
+      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """case_id""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
+    </Assign>
+
+    <WriteLine DisplayName="Log: Case Created" Text="[&quot;[EmailParser] SUCCESS — Case created: &quot; + CaseId]" />
+  </Sequence>
+</Activity>

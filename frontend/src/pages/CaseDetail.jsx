@@ -251,7 +251,7 @@ function DetailItem({ label, value }) {
 }
 
 function InvestigationSummary({ investigation_output }) {
-  if (!investigation_output) {
+  if (!investigation_output || Object.keys(investigation_output).length === 0) {
     return (
       <section className="border border-[var(--qt-border)] bg-[var(--qt-surface)] p-6">
         <h2 className="qt-section-heading">Investigation</h2>

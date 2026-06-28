@@ -1,0 +1,11 @@
+INFO:     Will watch for changes in these directories: ['D:\\Hackthon of summer vacation\\Ui-path\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [21736] using WatchFiles
+INFO:     Started server process [4552]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:54216 - "POST /complaints HTTP/1.1" 201 Created
+INFO:     127.0.0.1:54216 - "OPTIONS /complaints/C-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54216 - "GET /complaints/C-001 HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app\routes\complaints.py'. Reloading...
+ 
