@@ -149,13 +149,14 @@ def _validate_capa_output(items, valid_source_ids: set) -> Optional[str]:
         if not isinstance(citations, list) or len(citations) == 0:
             errors.append(f"item[{i}]['source_citations'] must be a non-empty list")
         else:
-            for citation in citations:
-                if citation not in valid_source_ids:
-                    errors.append(
-                        f"item[{i}]['source_citations'] contains '{citation}', which does "
-                        "not match any source_id from the investigation output or RAG "
-                        "context (fabricated or hallucinated citation)"
-                    )
+            if valid_source_ids:  # only validate citations when RAG context is available
+                for citation in citations:
+                    if citation not in valid_source_ids:
+                        errors.append(
+                            f"item[{i}]['source_citations'] contains '{citation}', which does "
+                            "not match any source_id from the investigation output or RAG "
+                            "context (fabricated or hallucinated citation)"
+                        )
 
     if "corrective" not in types_seen:
         errors.append("output must include at least one item with type == 'corrective'")

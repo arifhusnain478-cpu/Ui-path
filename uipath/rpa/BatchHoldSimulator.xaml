@@ -6,8 +6,8 @@
   <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
   <Sequence DisplayName="BatchHoldSimulator - QualiTrace AI" sap2010:WorkflowViewState.IdRef="1">
     <Sequence.Variables>
-      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
-      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Default="YOUR_VALID_JWT_TOKEN_HERE" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="https://arifhusnain-qualitraceai.hf.space" Name="BaseUrl" />
       <Variable x:TypeArguments="x:String" Name="ResponseBody" />
       <Variable x:TypeArguments="x:String" Name="Status" />
       <Variable x:TypeArguments="x:String" Name="BatchNumber" />
@@ -60,7 +60,7 @@
         <Sequence DisplayName="Write Batch Hold File">
           <Assign DisplayName="Set Output Path">
             <Assign.To><OutArgument x:TypeArguments="x:String">[OutputPath]</OutArgument></Assign.To>
-            <Assign.Value><InArgument x:TypeArguments="x:String">["D:\Hackthon of summer vacation\Ui-path\uipath\rpa\mock_erp\batch_hold_" + CaseId + ".json"]</InArgument></Assign.Value>
+            <Assign.Value><InArgument x:TypeArguments="x:String">["mock_erp\batch_hold_" + CaseId + ".json"]</InArgument></Assign.Value>
           </Assign>
 
           <Assign DisplayName="Build JSON">

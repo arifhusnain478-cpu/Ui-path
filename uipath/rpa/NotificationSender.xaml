@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Activity mc:Ignorable="sads" x:Class="UiPath.NotificationSender" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities" xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sads" x:Class="UiPath.NotificationSender" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities" xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
     <x:Property Name="CaseId" Type="InArgument(x:String)" />
   </x:Members>
   <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
   <Sequence DisplayName="NotificationSender - QualiTrace AI" sap2010:WorkflowViewState.IdRef="1">
     <Sequence.Variables>
-      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
-      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Default="YOUR_VALID_JWT_TOKEN_HERE" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="https://arifhusnain-qualitraceai.hf.space" Name="BaseUrl" />
       <Variable x:TypeArguments="x:String" Name="ResponseBody" />
       <Variable x:TypeArguments="x:String" Name="RiskLevel" />
       <Variable x:TypeArguments="x:String" Name="Status" />
@@ -51,31 +51,38 @@
       <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(ResponseBody, """sla_deadline""\s*:\s*""([^""]+)""").Groups(1).Value]</InArgument></Assign.Value>
     </Assign>
 
-    <!-- Log to console -->
-    <WriteLine DisplayName="Log: case_id" Text="[&quot;[NotificationSender] case_id     : &quot; + CaseId]" />
-    <WriteLine DisplayName="Log: risk_level" Text="[&quot;[NotificationSender] risk_level  : &quot; + RiskLevel]" />
-    <WriteLine DisplayName="Log: sla_deadline" Text="[&quot;[NotificationSender] sla_deadline: &quot; + SlaDeadline]" />
-
-    <!-- Build log content -->
+    <!-- Build Message Content -->
     <Assign DisplayName="Build Log Content">
       <Assign.To><OutArgument x:TypeArguments="x:String">[LogContent]</OutArgument></Assign.To>
       <Assign.Value><InArgument x:TypeArguments="x:String">["QualiTrace AI — Case Notification" + Environment.NewLine + "==============================" + Environment.NewLine + "case_id     : " + CaseId + Environment.NewLine + "risk_level  : " + RiskLevel + Environment.NewLine + "status      : " + Status + Environment.NewLine + "sla_deadline: " + SlaDeadline + Environment.NewLine + "generated_at: " + DateTime.UtcNow.ToString("o")]</InArgument></Assign.Value>
     </Assign>
+    
+    <!-- Send Real Email Notification using SMTP -->
+    <ui:SendMail Bcc="{x:Null}" Cc="{x:Null}" MailMessage="{x:Null}" TimeoutMS="{x:Null}" 
+      Body="[LogContent]" 
+      DisplayName="Send SMTP Mail Message" 
+      EnableSSL="True" 
+      From="your_robot_email@domain.com" 
+      IsBodyHtml="False" 
+      Name="QualiTrace AI" 
+      Password="YOUR_APP_PASSWORD" 
+      Port="587" 
+      SecureConnection="Auto" 
+      Server="smtp.gmail.com" 
+      Subject="[&quot;QualiTrace Action Required: Case &quot; + CaseId]" 
+      To="reviewer_email@domain.com" />
 
-    <!-- Set log path -->
+    <!-- Optional Fallback: Relative log write -->
     <Assign DisplayName="Set Log Path">
       <Assign.To><OutArgument x:TypeArguments="x:String">[LogPath]</OutArgument></Assign.To>
-      <Assign.Value><InArgument x:TypeArguments="x:String">["D:\Hackthon of summer vacation\Ui-path\uipath\rpa\logs\notification_" + CaseId + ".txt"]</InArgument></Assign.Value>
+      <Assign.Value><InArgument x:TypeArguments="x:String">["logs\notification_" + CaseId + ".txt"]</InArgument></Assign.Value>
     </Assign>
-
-    <!-- Write log file -->
     <InvokeMethod DisplayName="Write Notification Log" MethodName="WriteAllText" TargetType="[GetType(System.IO.File)]">
       <InvokeMethod.Parameters>
         <InArgument x:TypeArguments="x:String">[LogPath]</InArgument>
         <InArgument x:TypeArguments="x:String">[LogContent]</InArgument>
       </InvokeMethod.Parameters>
     </InvokeMethod>
-
-    <WriteLine DisplayName="Log: Done" Text="[&quot;[NotificationSender] Notification written to: &quot; + LogPath]" />
+    <WriteLine DisplayName="Log: Done" Text="[&quot;[NotificationSender] Notification sent and logged to: &quot; + LogPath]" />
   </Sequence>
 </Activity>

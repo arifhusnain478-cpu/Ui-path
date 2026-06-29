@@ -7,8 +7,8 @@
   <mva:VisualBasic.Settings>Assembly references and imported namespaces serialized as XML namespaces</mva:VisualBasic.Settings>
   <Sequence DisplayName="EmailParser - QualiTrace AI" sap2010:WorkflowViewState.IdRef="2">
     <Sequence.Variables>
-      <Variable x:TypeArguments="x:String" Default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVLTAwMSIsInVzZXJfaWQiOiJVLTAwMSIsInJvbGUiOiJxdWFsaXR5X3Jldmlld2VyIiwiZXhwIjoxNzgyNzEwNzk3fQ.9gJLvqADOI3Ar2JzubUl5-87xKgqvzPOZ_ftk-CIIHc" Name="AuthToken" />
-      <Variable x:TypeArguments="x:String" Default="http://localhost:8000" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:String" Default="YOUR_VALID_JWT_TOKEN_HERE" Name="AuthToken" />
+      <Variable x:TypeArguments="x:String" Default="https://arifhusnain-qualitraceai.hf.space" Name="BaseUrl" />
       <Variable x:TypeArguments="x:String" Name="EmailContent" />
       <Variable x:TypeArguments="x:String" Name="ProductName" />
       <Variable x:TypeArguments="x:String" Name="BatchNumber" />
@@ -23,13 +23,13 @@
 
     <WriteLine DisplayName="Log: EmailParser Started" Text="[&quot;[EmailParser] Starting complaint email processing...&quot;]" />
 
-    <!-- Read Email File -->
+    <!-- Read Email File using a relative path -->
     <Assign DisplayName="Read Email File">
       <Assign.To>
-        <OutArgument x:TypeArguments="x:String">[EmailContent]</OutArgument>
+         <OutArgument x:TypeArguments="x:String">[EmailContent]</OutArgument>
       </Assign.To>
       <Assign.Value>
-        <InArgument x:TypeArguments="x:String">[System.IO.File.ReadAllText("D:\Hackthon of summer vacation\Ui-path\uipath\rpa\mock_emails\complaint.txt")]</InArgument>
+        <InArgument x:TypeArguments="x:String">[System.IO.File.ReadAllText("mock_emails\complaint.txt")]</InArgument>
       </Assign.Value>
     </Assign>
 
@@ -43,7 +43,7 @@
 
     <Assign DisplayName="Parse BatchNumber">
       <Assign.To><OutArgument x:TypeArguments="x:String">[BatchNumber]</OutArgument></Assign.To>
-      <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Batch:\s*(.+)").Groups(1).Value.Trim()]</InArgument></Assign.Value>
+       <Assign.Value><InArgument x:TypeArguments="x:String">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Batch:\s*(.+)").Groups(1).Value.Trim()]</InArgument></Assign.Value>
     </Assign>
 
     <Assign DisplayName="Parse MarketCode">
@@ -63,10 +63,8 @@
 
     <Assign DisplayName="Parse PatientImpact">
       <Assign.To><OutArgument x:TypeArguments="x:Boolean">[PatientImpact]</OutArgument></Assign.To>
-      <Assign.Value><InArgument x:TypeArguments="x:Boolean">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Patient Impact:\s*(.+)").Groups(1).Value.Trim().ToLower() = "true"]</InArgument></Assign.Value>
+       <Assign.Value><InArgument x:TypeArguments="x:Boolean">[System.Text.RegularExpressions.Regex.Match(EmailContent, "Patient Impact:\s*(.+)").Groups(1).Value.Trim().ToLower() = "true"]</InArgument></Assign.Value>
     </Assign>
-
-    <WriteLine DisplayName="Log: Parsed Fields" Text="[&quot;[EmailParser] Parsed: &quot; + ProductName + &quot; | &quot; + ComplaintType + &quot; | &quot; + MarketCode]" />
 
     <!-- Build JSON Body -->
     <Assign DisplayName="Build Request Body">
@@ -79,7 +77,7 @@
 
     <Assign DisplayName="Call POST /complaints">
       <Assign.To><OutArgument x:TypeArguments="x:String">[ResponseBody]</OutArgument></Assign.To>
-      <Assign.Value>
+       <Assign.Value>
         <InArgument x:TypeArguments="x:String">
           <![CDATA[
             Function CallApi() As String
@@ -93,8 +91,6 @@
         </InArgument>
       </Assign.Value>
     </Assign>
-
-    <WriteLine DisplayName="Log: API Response" Text="[&quot;[EmailParser] Response: &quot; + ResponseBody]" />
 
     <!-- Extract case_id -->
     <Assign DisplayName="Extract case_id">
