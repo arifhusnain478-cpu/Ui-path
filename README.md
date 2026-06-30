@@ -1,6 +1,14 @@
 # QualiTrace AI
 **Team: QualiBots | UiPath AgentHack 2026**
 
+## 🔐 Live Demo & Judging Credentials
+To evaluate the live application immediately, please use the following credentials at our deployed frontend:
+* **Demo URL:** [https://ui-path-two.vercel.app](https://ui-path-two.vercel.app)
+* **Email:** `admin@qualitrace.com`
+* **Password:** `Admin@123`
+
+---
+
 ## 📖 Project Description
 **The Problem:** Traditional quality assurance in the pharmaceutical manufacturing industry is heavily bottlenecked. Manual triage of critical complaints (e.g., contamination, labeling errors) means high-risk alerts can get buried in inboxes, delaying corrective actions and putting regulatory compliance and patient safety at risk.
 
@@ -21,7 +29,7 @@ This solution heavily leverages the UiPath ecosystem to orchestrate the AI pipel
 * **Coded Agents:** The core intelligence runs on a Python/FastAPI backend utilizing a custom architecture of three chained AI Agents (Intake, Investigation, and CAPA) powered by Groq's `llama-3.3-70b-versatile` model. 
 * **Low-code Agents/Orchestration:** The cognitive output of the coded agents is seamlessly routed into UiPath Maestro's low-code orchestration environment for human-in-the-loop review and SLA management.
 
-## ⚙️ Setup Instructions for Judging
+## ⚙️ Setup Instructions for Local Testing
 
 ### 1. Backend (Python/FastAPI)
 1. Clone the repository and navigate to the `/backend` directory.
